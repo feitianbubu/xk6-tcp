@@ -1,0 +1,52 @@
+{
+  "Log": {
+    "Provider": "zap",
+    "Config": {
+      "FilePattern": "logs/%e.log",
+      "Level": 5,
+      "Console": true,
+      "TimeFormat": "2006-01-02 15:04:05.000"
+    }
+  },
+  "Server": {
+    "Provider": "grpcserver",
+    "Config": {
+      "Addr": ":9001",
+      "LogOptions": {
+        "QueryLog": true,
+        "ErrLogVerb": true
+      }
+    }
+  },
+  "MySQL": {
+    "Provider": "mysql",
+    "Config": {
+      "Host": "tcp(127.0.0.1:3306)",
+      "UserName": "root",
+      "Password": "123456789",
+      "Database": "auth",
+      "Charset": "utf8mb4",
+      "MinConnect": 20,
+      "MaxConnect": 100
+    }
+  },
+  "Observation": {
+    "Provider": "otel",
+    "Config": {
+      "Addr": ":30001",
+      "ProfilerPrefix": "/auth/pprof/",
+      "Tracer": {
+        "Type": "jaeger",
+        "Config": {
+          "Agent": {
+            "Host": "127.0.0.1",
+            "Port": "6831"
+          }
+        }
+      },
+      "Metric": {
+        "Type": "prometheus"
+      }
+    }
+  }
+}

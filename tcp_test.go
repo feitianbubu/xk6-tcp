@@ -4,43 +4,67 @@ import (
 	"fmt"
 	"testing"
 
-	"tevat.nd.org/basecode/goost/codec/binary"
-	xtcp "tevat.nd.org/provider/tcp"
+	"tevat.nd.org/framework/proxy"
 )
 
 func TestProxyTCP(t *testing.T) {
-	//	client := &TCP{}
-	//	client.Send([]byte("/api/v1/login"), []byte(`{
-	//  "userAddress": "0x279A4C36098c4e76182706511AB0346518ad6049",
-	//  "content": "1659516267",
-	//  "signature": "0xd5f2199e375be586e78e454595047edfe6688989a674eca1dc847658aa387e041ceed79ca17be21bd6c6541822ea87e1bf1f3a73cbdf3c0d76bc176a523584b600"
-	//}`))
-	simple := binary.NewSimple()
-	simple.Register(123, (*int32)(nil))
+	for i := 0; i < 5000; i++ {
+		tcpSend()
+	}
+}
 
-	handler := xtcp.NewDefaultClientHandler(simple)
-	err := xtcp.Dial("127.0.0.1:12345", handler)
+var ID uint32 = 1
+
+func tcpSend() {
+	client := &Module{}
+	conn, err := client.Connect("127.0.0.1:12345")
 	if err != nil {
+		fmt.Printf("connect fail: %s \n", err.Error())
 		return
 	}
-	handler.HandlePeerFunc(func(peer *xtcp.Peer) {
-		defer peer.Close()
-		ID++
-		peer.Send(int32(123))
+	defer conn.Close()
+	ID++
+	req := &Request{
+		ID:     ID,
+		Method: "/api/v1/config",
+		Msg:    "{}",
+	}
+	err = client.Send(conn, req)
+	if err != nil {
+		fmt.Printf("send fail: %s \n", err.Error())
+		return
+	}
+	v, err := client.Recv(conn)
+	if err != nil {
+		fmt.Printf("recv fail: %s \n", err.Error())
+		return
+	}
+	fmt.Printf("recv: %d \n", v.(proxy.Request).ID)
 
-		v, err := peer.Recv()
-		if err != nil {
-			fmt.Printf("perr recv fail: %s", err.Error())
-		}
-		fmt.Printf("recv:%+v", v)
-
-		//for data := range peer.DataChan() {
-		//	resp, ok := data.(proxy.Response)
-		//	if !ok {
-		//		return
-		//	}
-		//	fmt.Printf("%+v, msg:%s", resp, resp.Msg)
-		//}
-	})
-	select {}
 }
+
+//func tcpSend() {
+//	addr := "127.0.0.1:12345"
+//	client := &Module{}
+//	handler, err := client.Connect(addr)
+//	if err != nil {
+//		fmt.Printf("connect fail: %s \n", err.Error())
+//		return
+//	}
+//	fmt.Println("connect success", handler)
+//	method := "/api/v1/config"
+//	msg := `{}`
+//	reqMap := &Request{
+//		Method: method,
+//		Msg:    msg,
+//	}
+//	resp, err := client.Send(handler, reqMap)
+//	if err != nil {
+//		fmt.Println(err)
+//	}
+//
+//	if v, ok := resp.(proxy.Request); ok {
+//		fmt.Println(v.ID)
+//	}
+//	fmt.Println("===================done")
+//}

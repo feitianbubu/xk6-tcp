@@ -1,45 +1,39 @@
 import {check, sleep} from 'k6';
-import tcp from 'k6/x/tcp';
+import client from 'k6/x/tcp';
 import {Counter, Rate} from 'k6/metrics';
+// import exec from 'k6/execution';
+import {apiJson} from './apiData.js';
 
 const susRate = new Rate('susRate');
 const errCounter = new Counter('errCounter');
-const strAddr = '127.0.0.1:12345';
-let client = new tcp.Client();
+const addr = '127.0.0.1:12345';
 
-//
-//
-// import fs from 'fs';
-// import util from 'util';
-// let logPath = 'tcp.log';
-// let logFile = fs.createWriteStream(logPath, {flags: 'a'});
-// console.log = function () {
-//     logFile.write(util.format.apply(null, arguments) + '\n')
-// }
+export const options = {
+    vus: 100,
+    duration: '1s',
+};
+export const epDataSent = new Counter('endpoint_data_sent');
+export const epDataRecv = new Counter('endpoint_data_recv');
 
+// const handler = client.connect(strAddr);
 
-export function OnRevMsg(msg) {
-    let strMsg = msg.toString();
-    console.info('OnRevMsg:', strMsg);
-    susRate.add(true)
-}
-
+let i = 0;
 export default function () {
-    console.log('init test tcp');
-    let err = client.connect(strAddr, OnRevMsg)
-    if (err) {
-        console.log('connect fail: ', err);
+    // console.log('exec context:', __VU);
+    let {method, msg} = apiJson.config;
+    const req = {
+        id: ++i,
+        method: method,
+        body: msg,
     }
-    try {
-        req('hello');
-    } catch (e) {
-        console.log('req fail: ', e);
-        errCounter.add(1);
-    }
+    // console.log('req:', req.id);
+    // epDataSent.add(method.length + msg.length);
+    let conn = client.connect(addr);
+    client.send(conn, req);
+    let res = client.recv(conn);
+    // epDataRecv.add(JSON.stringify(res).length);
+    // console.log('res:', res.id);
     // sleep(1);
 }
-let req = function (strMsg) {
-    console.log('req:', strMsg);
-    client.writeStrLn(strMsg);
-}
+
 

@@ -1,0 +1,92 @@
+syntax = "proto3";
+package tevat.example.auth;
+
+import "tevat/api/annotations.proto";
+
+option go_package = "tevat/example/pkg/proto/auth";
+
+service Auth {
+  // 设置服务默认代理规则
+  option(tevat.api.proxy_default) = {
+    // 默认禁用proxy转发，客户端不能调用对应接口
+    proxy: DISABLED,
+    // 接口超时时间为3秒
+    timeout: "3s",
+    // 对客户端的协议为protobuf
+    proto: JSON,
+    // 方法在有别名的情况下不保留原名支持
+    keep_origin: false,
+  };
+
+  // 设置分片相关信息
+  option(tevat.api.shard) = {
+    // 使用账号id来分片，
+    shard_key_type: STRING,
+    // 分片信息会存放在消息中
+    shard_key_location: MESSAGE,
+    // 账号id是消息中的account_id字段
+    default_shard_field: "account_id",
+  };
+
+  rpc Login(LoginRequest) returns (Info){
+    option(tevat.api.proxy) = {
+      // 只有登录接口提供给客户端直接调用
+      proxy: ENABLED,
+      timeout: "60s",
+      // gate成功调用之后调用Events接口监听事件
+      watch: {
+        method: "Events",
+        event_key_field: "account_id",
+      }
+    };
+  }
+
+  rpc Logout(Info) returns (Empty) {
+  }
+
+  // 双向流接口不会暴露给客户端
+  rpc Events(stream Info) returns (stream Event){
+  }
+
+}
+
+message Empty {
+}
+
+message LoginRequest {
+  // 帐号提供的账号唯一ID，用于hash取模之后用于分片
+  string account_id = 1;
+  // 账服返回的token，用于和账服确认登录用
+  string account_token = 2;
+}
+
+message Info {
+  // 帐号ID，用于寻找对应的goroutine
+  string account_id = 1;
+  // 用户ID，集群中用户的唯一ID
+  uint64  uid = 2;
+  // 认证服务器生成的token
+  string auth_token = 3;
+}
+
+message EventLogin {
+  option (tevat.api.event_action) = {
+    forward: false,
+  };
+  string account_id = 1;
+}
+
+message EventLogout {
+  option (tevat.api.event_action) = {
+    forward: false,
+    action: DISCONNECT,
+  };
+  string account_id = 1;
+}
+
+message Event {
+  oneof event {
+    EventLogin login = 1;
+    EventLogout logout = 2;
+  }
+}

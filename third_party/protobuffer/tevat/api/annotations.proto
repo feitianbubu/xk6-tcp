@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package tevat.api;
+import "google/protobuf/descriptor.proto";
+
+option go_package = "git.itecart.com/tevat/protoc-gen/options";
+
+extend google.protobuf.ServiceOptions {
+  ServiceProxyOptions proxy_default = 1000;
+  ServiceShardOptions shard = 1001;
+}
+
+extend google.protobuf.MethodOptions {
+  ProxyOptions proxy = 1000;
+  bool ignore_shard_key = 1001;
+}
+
+
+extend google.protobuf.FieldOptions {
+  bool shard_key = 1000;
+}
+
+
+enum Proxy {
+  PROXY_UNSPECIFIED = 0;
+  ENABLED = 1;
+  DISABLED = 2;
+}
+
+enum Proto {
+  PROTO_UNSPECIFIED = 0;
+  PROTOBUF = 1;
+  JSON= 2;
+}
+
+message ServiceProxyOptions {
+  Proxy proxy = 1;
+  Proto proto = 2;
+  string timeout = 3;
+  bool keep_origin = 4;
+}
+
+message ProxyOptions {
+  Proxy proxy = 1;
+  Proto proto = 2;
+  string timeout = 3;
+  bool keep_origin = 4;
+  string method = 5;
+  Watch watch = 6;
+  // Watch unwatch = 7;
+}
+
+enum ShardKeyLocation {
+  SHARD_KEY_LOCATION_UNSPECIFIED = 0;
+  SESSION = 1;
+  MESSAGE = 2;
+} 
+
+message ServiceShardOptions {
+  enum ShardKeyType {
+    SHARD_KEY_TYPE_UNSPECIFIED = 0;
+    STRING = 1;
+    INT32 = 2;
+    INT64 = 3;
+    UINT32 = 4;
+    UINT64 = 5;
+  }
+  ShardKeyType shard_key_type = 1;
+  ShardKeyLocation shard_key_location = 5;
+  string default_shard_field = 6;
+}
+
+message Watch {
+  string method = 1;
+  // enum Param {
+  //   WATCH_PARAM_UNSPECIFIED = 0;
+  //   REQUEST = 1;
+  //   RESPONSE = 2;
+  // }
+  // Param param = 2;
+  // ShardKeyLocation req_key_location = 3;
+  // string req_key_field = 4;
+  bool event_boardcast = 5;
+  string event_key_field = 6;
+}
+
+extend google.protobuf.MessageOptions {
+  EventAction event_action = 1000;
+}
+message EventAction {
+  bool forward = 1;
+  enum Action {
+    UNSPECIFIED = 0;
+    DISCONNECT = 1;
+  }
+  Action action = 2;
+}
+

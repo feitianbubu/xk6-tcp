@@ -1,0 +1,66 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+message Empty {
+}
+
+message CreateRequest {
+  string name = 1;
+}
+
+message User {
+  string name = 1;
+}
+
+//英雄功能开始
+message Hero {
+  uint32 id = 1;
+  uint32 hero_id = 2;
+  uint32 level = 3;
+}
+
+message HeroUpgradeRequest {
+  uint32 id = 1;
+  uint32 level = 2;
+}
+
+//皮肤功能开始
+message Skin {
+  uint32 id = 1;
+  uint32 skin_id = 2;
+}
+
+message SkinUpgradeRequest {
+  uint32 id = 1;
+  uint32 level = 2;
+}
+
+//签到功能-客户端向服务端发签到请求
+message SignInRequest {
+}
+
+//签到功能-服务端发送签到响应
+message SignInResponse {
+  uint32 signed_num = 1;
+  uint32 last_signed=2;
+  string awards= 3;
+}
+
+//签到功能-服务端发送签到信息
+message SignInfo {
+  uint32 signed_num = 1;
+  uint32 last_signed=2;
+}
+
+
+message OnLogin {
+}
+
+message Events {
+  oneof Event {
+    OnLogin login = 1;
+    SignInfo sign_info=2;
+  }
+}

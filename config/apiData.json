@@ -1,6 +1,6 @@
 {
   "login": {
-    "method": "tevat.example.auth.Auth/login",
+    "method": "/tevat.example.auth.Auth/login",
     "msg": {"account_id":"1","account_token":"123456"}
   },
   "loginLP": {

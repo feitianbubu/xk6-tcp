@@ -2,14 +2,17 @@ package tcp
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/dop251/goja"
 	"google.golang.org/protobuf/proto"
+	"tevat.nd.org/basecode/goost/errors"
 	pb "tevat.nd.org/framework/proxy/proto"
 )
 
-var client = &Module{}
+var m = &Module{}
 
 //func OnRec(res *proxy.Request) {
 //	fmt.Printf("[test]OnRec:%+v \n", res)
@@ -26,7 +29,7 @@ func TestProxyTCP(t *testing.T) {
 	opts.MoveTimes = int64(10)
 	opts.AccountId = "2"
 	opts.WatchEnabled = true
-	err := client.Start(addr, opts)
+	err := start(addr, opts)
 	if err != nil {
 		fmt.Printf("start fail:%+v", err)
 	}
@@ -52,57 +55,43 @@ func TestProxyTCP(t *testing.T) {
 //	func rec() *proxy.Request {
 //		return client.Rec()
 //	}
-func getReqObject(name string, msg *goja.Object) *goja.Object {
-	//defer conn.Close()
-	ID++
-	reqMap := vm.NewObject()
-	//reqMap.Set("method", "tevat.example.auth.Auth/login")
-	reqMap.Set("id", ID)
-	msgMap := vm.NewObject()
-	switch name {
-	case "login":
-		reqMap.Set("method", "tevat.example.auth.Auth/login")
-		msgMap.Set("account_id", fmt.Sprintf("%d", ID))
-		msgMap.Set("account_token", "123456")
-	case "watch":
-		reqMap.Set("method", "/tevat.example.scene.Scene/WatchEvents")
-	case "move":
-		reqMap.Set("method", "/tevat.example.scene.Scene/Move")
+func start(addr string, opts Opts) error {
+	var err error
+	err = m.Connect(addr)
+	if err != nil {
+		return errors.WithStack(err)
 	}
-	if msg != nil {
-		reqMap.Set("msg", msg)
-	} else {
-		reqMap.Set("msg", msgMap)
+	err = m.Init()
+	if err != nil {
+		return errors.WithStack(err)
 	}
-	return reqMap
-	//metaMap := vm.NewObject()
-	//metaMap.Set("uid", "1")
-	//metaMap.Set("session-uid", "1")
-	//reqMap.Set("metadata", metaMap)
-	//req := &proxy.Request{
-	//	ID:     ID,
-	//	Method: []byte("tevat.example.auth.Auth/login"),
-	//	Msg:    []byte(`{"account_id":"` + fmt.Sprintf("%d", ID) + `","account_token":"123456"}`),
-	//}
-	//req := &Request{
-	//	ID:       ID,
-	//	Method:   "tevat.example.logic.Logic/Info",
-	//	Msg:      "{}",
-	//}
-	//req := &Request{
-	//	ID:     ID,
-	//	Method: "/api/v1/config",
-	//	Msg:    "{}",
-	//}
-
-	//fmt.Printf("[test]reqMap:%+v \n", reqMap.Export())
-	//return client.SendWithRes(reqMap)
-	//if name == "watch" {
-	//	return proxy.Request{}
-	//}
-	//v := client.GetResChan()
-	//fmt.Printf("[test]resChan id:%d, msg:%s \n", v.ID, v.Msg)
-	//return v
+	fmt.Printf("start opts:%+v \n", opts)
+	uid, err := m.Login(opts.AccountId)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	m.StartOnRec(m.OnRec)
+	if opts.WatchEnabled {
+		err := m.Send(m.GetReqObject("event"))
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	for i := 0; i < int(opts.MoveTimes); i++ {
+		location := map[string]interface{}{}
+		location["uid"] = uid
+		rs := rand.NewSource(time.Now().UnixNano())
+		location["x"] = rand.New(rs).Intn(100)
+		location["y"] = rand.New(rs).Intn(100)
+		//msg := map[string]interface{}{}
+		//msg["location"] = location
+		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
+		randSleep := time.Duration(rand.New(rs).Intn(6000))
+		time.Sleep(time.Millisecond * randSleep)
+	}
+	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
+	time.Sleep(time.Millisecond * 1000)
+	return err
 }
 
 func TestRuntime_ExportToFunc1(t *testing.T) {

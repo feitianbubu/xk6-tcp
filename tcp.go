@@ -13,20 +13,33 @@ import (
 	"time"
 
 	"go.k6.io/k6/js/modules"
+	"google.golang.org/protobuf/proto"
 	"tevat.nd.org/basecode/goost/async"
 	"tevat.nd.org/basecode/goost/encoding/binary"
 	"tevat.nd.org/basecode/goost/errors"
 	"tevat.nd.org/framework/proxy"
+	pb "tevat.nd.org/framework/proxy/proto"
 )
 
 type (
 	Module struct {
-		vu    modules.VU
-		conn  net.Conn
-		onRec func(res *proxy.Response)
-		opts  map[string]interface{}
+		vu       modules.VU
+		conn     net.Conn
+		onRec    func(res *proxy.Response)
+		opts     map[string]interface{}
+		apiDataS ApiDataS
 	}
 	RootModule struct{}
+	ApiDataS   struct {
+		data map[string]ApiData
+		mu   sync.Mutex
+	}
+	ApiData struct {
+		ID       uint32
+		Method   string
+		Metadata map[string]interface{}
+		Msg      map[string]interface{}
+	}
 )
 
 // Ensure the interfaces are implemented correctly.
@@ -86,33 +99,57 @@ func (m *Module) StartOnRec(onRec func(res *proxy.Response)) {
 	})
 }
 
-//func createMd(m map[string]interface{}) binary.BytesWithUint16Len {
-//	metadata := make(map[string]*pb.Metadata_Value)
-//	for k, v := range m {
-//		metadata[k] = &pb.Metadata_Value{
-//			Values: []string{fmt.Sprintf("%v", v)},
-//		}
-//	}
-//	md := &pb.Metadata{
-//		Metadata: metadata,
-//	}
-//	b, _ := proto.Marshal(md)
-//	return b
-//}
+func createMd(m map[string]interface{}) binary.BytesWithUint16Len {
+	metadata := make(map[string]*pb.Metadata_Value)
+	for k, v := range m {
+		metadata[k] = &pb.Metadata_Value{
+			Values: []string{fmt.Sprintf("%v", v)},
+		}
+	}
+	md := &pb.Metadata{
+		Metadata: metadata,
+	}
+	b, _ := proto.Marshal(md)
+	return b
+}
 
 var codec = &proxy.Codec{}
 
-func (m *Module) Send(req *proxy.Request) error {
+func (m *Module) Send(reqAny any) error {
 	var err error
 	conn := m.conn
 	if conn == nil {
 		return fmt.Errorf("conn is nil")
 	}
 
+	req := &proxy.Request{}
+	switch v := reqAny.(type) {
+	case *proxy.Request:
+		req = v
+	case map[string]interface{}:
+		id := v["id"].(int64)
+		req.ID = uint32(id)
+		method := v["method"].(string)
+		req.Method = []byte(method)
+		msg := v["msg"].(map[string]interface{})
+		msgBytes, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Printf("send fail by json.Marshal(msg) msg:%+v \n", msg)
+		}
+		req.Msg = msgBytes
+		if v["metadata"] != nil {
+			metadata := v["metadata"].(map[string]interface{})
+			req.Metadata = createMd(metadata)
+		}
+	default:
+		debug.PrintStack()
+		return errors.WithStack(fmt.Errorf("send fail by invalid req:%+v", reqAny))
+	}
+
 	//fmt.Printf("[%v]::req, req.ID:%+v, method:%v, msg:%+v \n", time.Now(), req.ID, m.ToString(req.Method), m.Parse(req.Msg))
 	fmt.Printf("+%v", req.ID)
 	if req.Method == nil || len(req.Method) == 0 {
-		return fmt.Errorf("req is invalid, req: %+v \n", req)
+		return errors.WithStack(fmt.Errorf("req is invalid, req: %+v \n", req))
 	}
 	err = codec.Encode(conn, req)
 	if err != nil {
@@ -161,8 +198,8 @@ func (m *Module) Parse(bytes []byte) map[string]interface{} {
 	resMap := make(map[string]interface{})
 	err := json.Unmarshal(bytes, &resMap)
 	if err != nil {
-		debug.PrintStack()
 		fmt.Printf("parse fail: bytes:%+v, msg:%s", bytes, bytes)
+		debug.PrintStack()
 	}
 	return resMap
 }
@@ -186,7 +223,7 @@ var ID = uint32(0)
 
 func (m *Module) GetReqObject(name string, options ...func(map[string]interface{})) *proxy.Request {
 	var err error
-	req, err := GetRequestFromJson(name)
+	req, err := m.GetRequestFromJson(name)
 	if err != nil {
 		fmt.Printf("GetRequestFromJson fail, err:%+v \n", errors.WithStack(err))
 		return nil
@@ -216,25 +253,12 @@ func (m *Module) GetReqObject(name string, options ...func(map[string]interface{
 	return req
 }
 
-type ApiData struct {
-	ID       uint32
-	Method   string
-	Metadata map[string]interface{}
-	Msg      map[string]interface{}
-}
-type ApiDataS struct {
-	data map[string]ApiData
-	mu   sync.Mutex
-}
-
-var apiDataS ApiDataS
-
-func (ad *ApiDataS) init() error {
-	if ad.data != nil {
+func (m *Module) Init() error {
+	if m.apiDataS.data != nil {
 		return nil
 	}
-	apiDataS.mu.Lock()
-	defer apiDataS.mu.Unlock()
+	m.apiDataS.mu.Lock()
+	defer m.apiDataS.mu.Unlock()
 	jsonFile, err := os.Open("config/apiData.json")
 	if err != nil {
 		fmt.Printf("open file fail:%+v \n", err)
@@ -247,19 +271,18 @@ func (ad *ApiDataS) init() error {
 		}
 	}(jsonFile)
 	byteValue, _ := io.ReadAll(jsonFile)
-	err = json.Unmarshal(byteValue, &apiDataS.data)
+	err = json.Unmarshal(byteValue, &m.apiDataS.data)
 	if err != nil {
 		fmt.Printf("Unmarshal file fail:%+v \n", err)
 		return err
 	}
-	fmt.Printf("\ninitApiDatas:%+v \n", apiDataS.data)
-	fmt.Println(&apiDataS)
+	fmt.Printf("\ninitApiDatas:%+v \n", m.apiDataS.data)
 	return nil
 }
 
-func GetRequestFromJson(name string) (*proxy.Request, error) {
+func (m *Module) GetRequestFromJson(name string) (*proxy.Request, error) {
 	//fmt.Printf("apiDataS:%+v \n", apiDataS)
-	reqJson := apiDataS.data[name]
+	reqJson := m.apiDataS.data[name]
 	msg, _ := json.Marshal(reqJson.Msg)
 	req := &proxy.Request{
 		ID:     reqJson.ID,
@@ -308,7 +331,7 @@ func (m *Module) Start(addr string, opts Opts) error {
 	}
 	//defer m.Close()
 	//m.Connect("127.0.0.1:12345")
-	err = apiDataS.init()
+	err = m.Init()
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -328,12 +351,12 @@ func (m *Module) Start(addr string, opts Opts) error {
 		location := map[string]interface{}{}
 		location["uid"] = uid
 		rs := rand.NewSource(time.Now().UnixNano())
-		location["x"] = rand.New(rs).Int()
-		location["y"] = rand.New(rs).Int()
+		location["x"] = rand.New(rs).Intn(100)
+		location["y"] = rand.New(rs).Intn(100)
 		//msg := map[string]interface{}{}
 		//msg["location"] = location
 		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
-		randSleep := time.Duration(rand.New(rs).Intn(60))
+		randSleep := time.Duration(rand.New(rs).Intn(6000))
 		time.Sleep(time.Millisecond * randSleep)
 	}
 	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))

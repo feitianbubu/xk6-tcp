@@ -2,7 +2,7 @@ import client from 'k6/x/tcp';
 import {Counter} from 'k6/metrics';
 let addr = '172.24.140.131:12345';
 // addr = '10.0.0.3:12345';
-addr = '127.0.0.1:12345';
+// addr = '127.0.0.1:12345';
 
 export const options = {
     vus: 400,
@@ -16,13 +16,18 @@ export const options = {
     //     }
     // }
 };
-
+export function setup() {
+    console.log('setup');
+}
 export default function () {
-    const move_times = 100
+    const move_times = 1
     const opts = {
         move_times,
         account_id:__VU+10000,
         watch_enabled: true
     }
     client.start(addr, opts);
+}
+export function teardown() {
+    console.log('teardown');
 }

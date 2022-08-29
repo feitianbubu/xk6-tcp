@@ -23,10 +23,13 @@ func TestProxyTCP(t *testing.T) {
 	addr := "172.24.140.131:12345"
 	//addr = "127.0.0.1:12345"
 	opts := Opts{}
-	opts.MoveTimes = int64(1000)
+	opts.MoveTimes = int64(10)
 	opts.AccountId = "2"
 	opts.WatchEnabled = true
-	client.Start(addr, opts)
+	err := client.Start(addr, opts)
+	if err != nil {
+		fmt.Printf("start fail:%+v", err)
+	}
 	//loginRes := client.SendWithRes(getReqObject("login", nil))
 	//loginMsg := client.Parse(loginRes.Msg)
 	//uid := loginMsg["uid"].(float64)

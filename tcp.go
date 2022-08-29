@@ -7,18 +7,16 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/dop251/goja"
-	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
-	"google.golang.org/protobuf/proto"
 	"tevat.nd.org/basecode/goost/async"
 	"tevat.nd.org/basecode/goost/encoding/binary"
 	"tevat.nd.org/basecode/goost/errors"
 	"tevat.nd.org/framework/proxy"
-	pb "tevat.nd.org/framework/proxy/proto"
 )
 
 type (
@@ -52,93 +50,82 @@ func init() {
 	modules.Register("k6/x/tcp", &RootModule{})
 }
 
-func (m *Module) Connect(addr string) {
+func (m *Module) Connect(addr string) error {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		m.Throw(fmt.Errorf("conn Connect fail: %s \n", err.Error()))
+		return fmt.Errorf("conn Connect fail: %s \n", err.Error())
 	}
 	m.conn = conn
-	return
+	return nil
 }
 
-func (m *Module) ConnectOnRec(addr string, onRec func(res *proxy.Response)) {
-	m.Connect(addr)
+func (m *Module) ConnectOnRec(addr string, onRec func(res *proxy.Response)) error {
+	err := m.Connect(addr)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	m.onRec = onRec
+	return nil
 }
 func (m *Module) StartOnRec(onRec func(res *proxy.Response)) {
 	defer func() {
 		if r := recover(); r != nil {
-			m.Throw(fmt.Errorf("=====on Rec panic=====%+v", r))
+			fmt.Printf("=====StartOnRec panic=====%+v \n", r)
 		}
 	}()
 	m.onRec = onRec
 	async.GoRaw(func() {
 		for {
-			res := m.Rec()
+			res, _ := m.Rec()
 			//fmt.Printf("[%v]::for onRec, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.ToString(res.Msg))
 			if m.onRec != nil {
-				m.onRec(&res)
+				m.onRec(res)
 			}
 			//time.Sleep(time.Millisecond * 10)
 		}
 	})
 }
 
-func createMd(m map[string]interface{}) binary.BytesWithUint16Len {
-	metadata := make(map[string]*pb.Metadata_Value)
-	for k, v := range m {
-		metadata[k] = &pb.Metadata_Value{
-			Values: []string{fmt.Sprintf("%v", v)},
-		}
-	}
-	md := &pb.Metadata{
-		Metadata: metadata,
-	}
-	b, _ := proto.Marshal(md)
-	return b
-}
+//func createMd(m map[string]interface{}) binary.BytesWithUint16Len {
+//	metadata := make(map[string]*pb.Metadata_Value)
+//	for k, v := range m {
+//		metadata[k] = &pb.Metadata_Value{
+//			Values: []string{fmt.Sprintf("%v", v)},
+//		}
+//	}
+//	md := &pb.Metadata{
+//		Metadata: metadata,
+//	}
+//	b, _ := proto.Marshal(md)
+//	return b
+//}
 
 var codec = &proxy.Codec{}
 
-func (m *Module) Send(req *proxy.Request) {
+func (m *Module) Send(req *proxy.Request) error {
+	var err error
 	conn := m.conn
 	if conn == nil {
-		m.Throw(fmt.Errorf("conn is nil"))
+		return fmt.Errorf("conn is nil")
 	}
-	var err error
 
 	//fmt.Printf("[%v]::req, req.ID:%+v, method:%v, msg:%+v \n", time.Now(), req.ID, m.ToString(req.Method), m.Parse(req.Msg))
 	fmt.Printf("+%v", req.ID)
 	if req.Method == nil || len(req.Method) == 0 {
-		m.Throw(fmt.Errorf("req is invalid, req: %+v \n", req))
+		return fmt.Errorf("req is invalid, req: %+v \n", req)
 	}
 	err = codec.Encode(conn, req)
 	if err != nil {
-		m.Throw(fmt.Errorf("send fail: %s \n", err.Error()))
+		return fmt.Errorf("send fail: %s \n", err.Error())
 	}
-	return
-}
-func getReqId(reqJson *goja.Object) (id uint32) {
-	if reqJson.Get("id") == nil {
-		return
-	}
-	idExport, ok := reqJson.Get("id").Export().(int64)
-	if !ok {
-		return
-	}
-	return uint32(idExport)
+	return nil
 }
 
-func (m *Module) Throw(err error) {
-	fmt.Printf("[%v]::throw fail, err:%+v", time.Now(), err)
-	common.Throw(m.vu.Runtime(), fmt.Errorf("conn is nil"))
-}
-
-func (m *Module) Decode(r io.Reader) (proxy.Response, error) {
+func (m *Module) Decode(r io.Reader) (*proxy.Response, error) {
 	var h uint32
 	//fmt.Println("read h")
 	if err := binary.Read(r, binary.LittleEndian, &h); err != nil {
-		return proxy.Response{}, err
+		return nil, err
 	}
 
 	//fmt.Println("read res", h)
@@ -146,28 +133,24 @@ func (m *Module) Decode(r io.Reader) (proxy.Response, error) {
 	err := binary.Read(r, binary.LittleEndian, &res)
 	//fmt.Printf("decode:%+v, err:%+v \n", res, err)
 
-	return res, err
+	return &res, err
 }
 
-func (m *Module) Rec() proxy.Response {
+func (m *Module) Rec() (*proxy.Response, error) {
 	defer func() {
 		if r := recover(); r != nil {
-			m.Throw(fmt.Errorf("=====Rec panic=====%+v", r))
+			fmt.Printf("=====Rec panic=====%+v \n", r)
 		}
 	}()
 	conn := m.conn
 	if conn == nil {
-		m.Throw(fmt.Errorf("conn is nil"))
+		return nil, fmt.Errorf("conn is nil")
 	}
 	//fmt.Printf("[%v]::codec.Decode,start \n", time.Now())
 	//v2, err := m.Decode(conn)
 	//fmt.Println("[go] m.Decode ", v2, err)
-	v, err := m.Decode(conn)
+	return m.Decode(conn)
 	//fmt.Printf("[%v]:: m.Decode, v:%+v, err:%+v  \n", time.Now(), v, err)
-	if err != nil {
-		m.Throw(fmt.Errorf("recv fail: %s \n", err.Error()))
-	}
-	return v
 }
 
 func (m *Module) Stringify(obj any) string {
@@ -178,7 +161,8 @@ func (m *Module) Parse(bytes []byte) map[string]interface{} {
 	resMap := make(map[string]interface{})
 	err := json.Unmarshal(bytes, &resMap)
 	if err != nil {
-		fmt.Printf("parse fail: bytes:%+v, msg:%s, err:%+v", bytes, bytes, errors.WithStack(err))
+		debug.PrintStack()
+		fmt.Printf("parse fail: bytes:%+v, msg:%s", bytes, bytes)
 	}
 	return resMap
 }
@@ -186,32 +170,35 @@ func (m *Module) ToString(data any) string {
 	return fmt.Sprintf("%s", data)
 }
 
-func (m *Module) SendWithRes(reqJson *proxy.Request) proxy.Response {
-	m.Send(reqJson)
+func (m *Module) SendWithRes(reqJson *proxy.Request) (*proxy.Response, error) {
+	err := m.Send(reqJson)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	return m.Rec()
 }
 
 func (m *Module) Close() error {
-	conn := m.conn
-	if conn == nil {
-		m.Throw(fmt.Errorf("conn is nil"))
-	}
-	return conn.Close()
+	return m.conn.Close()
 }
 
 var ID = uint32(0)
 
 func (m *Module) GetReqObject(name string, options ...func(map[string]interface{})) *proxy.Request {
+	var err error
 	req, err := GetRequestFromJson(name)
 	if err != nil {
-		m.Throw(fmt.Errorf("GetRequestFromJson fail, err:%+v", errors.WithStack(err)))
+		fmt.Printf("GetRequestFromJson fail, err:%+v \n", errors.WithStack(err))
+		return nil
 	}
-	//reqMap.Set("method", "tevat.example.auth.Auth/login")
-	//ID++
 	atomic.AddUint32(&ID, 1)
 	req.ID = ID
 	msg := map[string]interface{}{}
-	json.Unmarshal(req.Msg, &msg)
+	err = json.Unmarshal(req.Msg, &msg)
+	if err != nil {
+		fmt.Printf("GetReqObject Unmarshal fail, err:%+v \n", errors.WithStack(err))
+		return nil
+	}
 	//switch name {
 	//case "login":
 	//	msg["account_id"] = fmt.Sprintf("%d", ID)
@@ -222,7 +209,8 @@ func (m *Module) GetReqObject(name string, options ...func(map[string]interface{
 	}
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
-		m.Throw(fmt.Errorf("GetReqObject Marshal fail, err:%+v", errors.WithStack(err)))
+		fmt.Printf("GetReqObject Marshal fail, err:%+v \n", errors.WithStack(err))
+		return nil
 	}
 	req.Msg = msgBytes
 	return req
@@ -234,33 +222,44 @@ type ApiData struct {
 	Metadata map[string]interface{}
 	Msg      map[string]interface{}
 }
-type ApiDatas map[string]ApiData
+type ApiDataS struct {
+	data map[string]ApiData
+	mu   sync.Mutex
+}
 
-var apiDatas *ApiDatas
+var apiDataS ApiDataS
 
-func initApiDatas() error {
-	if apiDatas != nil {
+func (ad *ApiDataS) init() error {
+	if ad.data != nil {
 		return nil
 	}
+	apiDataS.mu.Lock()
+	defer apiDataS.mu.Unlock()
 	jsonFile, err := os.Open("config/apiData.json")
 	if err != nil {
 		fmt.Printf("open file fail:%+v \n", err)
 		return err
 	}
-	defer jsonFile.Close()
+	defer func(jsonFile *os.File) {
+		err := jsonFile.Close()
+		if err != nil {
+			return
+		}
+	}(jsonFile)
 	byteValue, _ := io.ReadAll(jsonFile)
-	err = json.Unmarshal(byteValue, &apiDatas)
+	err = json.Unmarshal(byteValue, &apiDataS.data)
 	if err != nil {
 		fmt.Printf("Unmarshal file fail:%+v \n", err)
 		return err
 	}
-	fmt.Printf("initApiDatas:%+v \n", apiDatas)
+	fmt.Printf("\ninitApiDatas:%+v \n", apiDataS.data)
+	fmt.Println(&apiDataS)
 	return nil
 }
 
 func GetRequestFromJson(name string) (*proxy.Request, error) {
-	//fmt.Printf("apiDatas:%+v \n", apiDatas)
-	reqJson := (*apiDatas)[name]
+	//fmt.Printf("apiDataS:%+v \n", apiDataS)
+	reqJson := apiDataS.data[name]
 	msg, _ := json.Marshal(reqJson.Msg)
 	req := &proxy.Request{
 		ID:     reqJson.ID,
@@ -276,11 +275,14 @@ func GetRequestFromJson(name string) (*proxy.Request, error) {
 
 func (m *Module) Login(accountId string) (float64, error) {
 	req := m.GetReqObject("login", SetMsg("account_id", accountId))
-	res := m.SendWithRes(req)
+	res, err := m.SendWithRes(req)
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
 
 	fmt.Printf("[%v]:login, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.Parse(res.Msg))
 	if !res.Result {
-		return 0, fmt.Errorf("login fail by:%v", req.Msg)
+		return 0, fmt.Errorf("login fail by:%s", req.Msg)
 	}
 	msg := m.Parse(res.Msg)
 	uid := msg["uid"].(float64)
@@ -299,18 +301,28 @@ type Opts struct {
 //		}
 //	}
 func (m *Module) Start(addr string, opts Opts) error {
-	m.Connect(addr)
+	var err error
+	err = m.Connect(addr)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	//defer m.Close()
 	//m.Connect("127.0.0.1:12345")
-	initApiDatas()
+	err = apiDataS.init()
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	fmt.Printf("start opts:%+v \n", opts)
 	uid, err := m.Login(opts.AccountId)
 	if err != nil {
-		m.Throw(err)
+		return errors.WithStack(err)
 	}
 	m.StartOnRec(m.OnRec)
 	if opts.WatchEnabled {
-		m.Send(m.GetReqObject("event"))
+		err := m.Send(m.GetReqObject("event"))
+		if err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	for i := 0; i < int(opts.MoveTimes); i++ {
 		location := map[string]interface{}{}
@@ -320,13 +332,13 @@ func (m *Module) Start(addr string, opts Opts) error {
 		location["y"] = rand.New(rs).Int()
 		//msg := map[string]interface{}{}
 		//msg["location"] = location
-		m.Send(m.GetReqObject("move", SetMsg("location", location)))
-		rand := time.Duration(rand.New(rs).Intn(60))
-		time.Sleep(time.Millisecond * rand)
+		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
+		randSleep := time.Duration(rand.New(rs).Intn(60))
+		time.Sleep(time.Millisecond * randSleep)
 	}
-	m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
+	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
 	time.Sleep(time.Millisecond * 1000)
-	return nil
+	return err
 }
 func SetMsg(key string, value interface{}) func(map[string]interface{}) {
 	return func(msg map[string]interface{}) {

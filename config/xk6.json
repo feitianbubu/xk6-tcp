@@ -1,0 +1,20 @@
+{
+  "flow": [
+    {
+      "id": "login",
+      "msg": {
+        "uid": {
+          "bind": "$(__VU)"
+        }
+      }
+    },
+    {
+      "id": "event"
+    },
+    {
+      "id": "move",
+      "times": 100,
+      "msg": {"x": "Match.random()*100"}
+    }
+  ]
+}

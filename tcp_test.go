@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"tevat.nd.org/basecode/goost/async"
 	"tevat.nd.org/basecode/goost/errors"
+	"tevat.nd.org/framework/proxy"
 	pb "tevat.nd.org/framework/proxy/proto"
 )
 
@@ -20,6 +23,7 @@ import (
 //}
 
 var vm = goja.New()
+var ID = uint32(0)
 
 func TestProxyTCP(t *testing.T) {
 
@@ -107,7 +111,10 @@ func start(addr string, opts Opts) error {
 		//randSleep := time.Duration(rand.New(rs).Intn(6000))
 		//time.Sleep(time.Millisecond * randSleep)
 	}
-	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
+	req := m.GetReqObject("leave", SetMsg("uid", uid))
+	//atomic.AddUint32(&ID, 1)
+	//req.ID = ID
+	err = m.Send(req)
 	time.Sleep(time.Millisecond * 1000)
 	m.Close()
 	return err
@@ -167,4 +174,66 @@ func sTestMockMD(t *testing.T) {
 	}
 	b, _ := proto.Marshal(md)
 	t.Log(b)
+}
+func sTestGojaValue(t *testing.T) {
+	const JS = `
+	function f(param){
+		return Math.floor(Math.random()*param*(new Date()))%param
+	}
+	`
+	vm := goja.New()
+	var err error
+	_, err = vm.RunString(JS)
+	if err != nil {
+		fmt.Println("vm.RunString(JS) fail", err, JS)
+	}
+	var fn func(i string) string
+	err = vm.ExportTo(vm.Get("f"), &fn)
+	if err != nil {
+		fmt.Println("vm.ExportTo fail", err, &fn)
+	}
+	fmt.Println(fn("40"))
+	fmt.Println(fn("40"))
+	fmt.Println(fn("40"))
+
+	f, ok := goja.AssertFunction(vm.Get("f"))
+	if !ok {
+		fmt.Println("goja.AssertFunction fail", err, &f)
+	}
+	res, err := f(goja.Undefined(), vm.ToValue(100))
+	if err != nil {
+		fmt.Println("f(goja.Undefined(), vm.ToValue(100)) fail", err, &res)
+	}
+	fmt.Println(res)
+}
+
+func TestAtomic(t *testing.T) {
+	t.Parallel()
+	req := &proxy.Request{}
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		atomic.AddUint32(&ID, 1)
+		req.ID = ID
+		go func(r proxy.Request) {
+			fmt.Println("req:", r.ID)
+			wg.Done()
+		}(*req)
+	}
+	wg.Wait()
+}
+
+func TestAtomic2(t *testing.T) {
+	t.Parallel()
+	req := &proxy.Request{}
+	gg := async.NewGoGroup()
+	for i := 1; i < 50; i++ {
+		gg.Go(func() func(context.Context) {
+			return func(_ context.Context) {
+				atomic.AddUint32(&req.ID, 1)
+			}
+		}())
+	}
+	gg.Wait()
+	fmt.Println("req2:", req.ID)
 }

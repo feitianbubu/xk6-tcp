@@ -234,8 +234,6 @@ func (m *Module) Close() {
 	}
 }
 
-var ID = uint32(0)
-
 func (m *Module) GetReqObject(name string, options ...func(map[string]interface{})) *proxy.Request {
 	var err error
 	req, err := m.GetRequestFromJson(name)
@@ -243,8 +241,6 @@ func (m *Module) GetReqObject(name string, options ...func(map[string]interface{
 		fmt.Printf("GetRequestFromJson fail, err:%+v \n", errors.WithStack(err))
 		return nil
 	}
-	//atomic.AddUint32(&ID, 1)
-	//req.ID = ID
 	msg := map[string]interface{}{}
 	err = json.Unmarshal(req.Msg, &msg)
 	if err != nil {
@@ -300,7 +296,6 @@ func (m *Module) GetRequestFromJson(name string) (*proxy.Request, error) {
 	reqJson := m.apiDataS.data[name]
 	msg, _ := json.Marshal(reqJson.Msg)
 	req := &proxy.Request{
-		ID:     reqJson.ID,
 		Method: []byte(reqJson.Method),
 		Msg:    msg,
 	}

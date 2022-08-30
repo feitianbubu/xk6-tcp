@@ -1,6 +1,6 @@
 import m from 'k6/x/tcp';
 import {Counter} from 'k6/metrics';
-import {sleep} from 'k6'
+import {sleep} from 'k6';
 
 let addr = '172.24.140.131:12345';
 // addr = '10.0.0.3:12345';
@@ -25,12 +25,16 @@ export function setup() {
 
 let i = 0;
 export default function () {
-    const move_times = 100
-    const opts = {
-        move_times,
-        account_id: __VU + 10000,
-        watch_enabled: true
+
+    function onRec(msg) {
+        console.log('onRec:', msg);
     }
+    const move_times = 100;
+    // const opts = {
+    //     move_times,
+    //     account_id: __VU + 10000,
+    //     watch_enabled: true
+    // }
     // client.start(addr, opts);
 
         let getInvoKeApiJson = function(name ,msg){
@@ -40,15 +44,15 @@ export default function () {
             reqJson.msg = msg;
         }
         reqJson.msg = reqJson.msg || {};
-        return reqJson
+        return reqJson;
     }
     let invokeApi = function (name, msg) {
-        let reqJson = getInvoKeApiJson(name, msg)
+        let reqJson = getInvoKeApiJson(name, msg);
         console.log(new Date(), ':reqJson:', reqJson);
         // epDataSent.add(JSON.stringify(reqJson).length);
         m.send(reqJson);
         // sendCounter.add(1);
-        return reqJson.id;
+        // return reqJson.id;
         // if (name === "event"){
         //     return null;
         // }
@@ -60,22 +64,35 @@ export default function () {
         // return res;
     }
 
-
-    m.connect(addr)
-    // m.init()
-    // let uid = m.login(__VU)
-    const account_id = ""+__VU
-    invokeApi("login",{account_id, 'account_token':'123456'})
+    m.connect(addr);
+        console.log('mmmmmmmmmmmm:',m)
+    // m.init();
+    // let uid = m.login(__VU);
+    const account_id = ""+__VU;
+    invokeApi("login",{account_id, 'account_token':'123456'});
     const loginInfo = m.rec();
-    if(!loginInfo.result){
-        console.log('login fail', __VU, loginInfo)
+    if(!loginInfo || !loginInfo.result){
+        console.log('[js]login fail', __VU, loginInfo);
+        // m.close();
         return;
     }
-    const {uid} = m.parse(loginInfo.msg);
+    let uid;
+    try{
+        uid = m.parse(loginInfo.msg).uid;
+    }catch (e) {
+        console.log("[js]parse fail", e);
+        // m.close();
+        return;
+    }
+    if(!uid){
+        console.log('[js]login fail', __VU, uid);
+        // m.close();
+        return;
+    }
     console.log('login success:',__VU, uid);
-    m.startOnRec(onRec)
-    invokeApi("event")
-    for (let i = 0; i < move_times; i++) {
+    m.startOnRec(onRec);
+    invokeApi("event");
+    for (let j = 0; j < move_times; j++) {
         let location = {
             uid,
             "x": 1,
@@ -86,15 +103,12 @@ export default function () {
         //     "method": "/tevat.example.scene.Scene/Move",
         //     "msg": {location}
         // }
-        invokeApi("move", {location})
-        sleep(1)
+        invokeApi("move", {location});
+        sleep(1);
     }
     // m.send(m.GetReqObject("leave", {uid}))
-    sleep(1)
-}
-
-export function onRec(msg) {
-    console.log('onRec:', msg);
+    // m.close();
+    sleep(2);
 }
 
 export function teardown() {

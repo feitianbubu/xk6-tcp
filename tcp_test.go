@@ -1,18 +1,19 @@
 package tcp
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/dop251/goja"
 	"google.golang.org/protobuf/proto"
+	"tevat.nd.org/basecode/goost/async"
 	"tevat.nd.org/basecode/goost/errors"
 	pb "tevat.nd.org/framework/proxy/proto"
 )
-
-var m = &Module{}
 
 //func OnRec(res *proxy.Request) {
 //	fmt.Printf("[test]OnRec:%+v \n", res)
@@ -26,13 +27,29 @@ func TestProxyTCP(t *testing.T) {
 	addr := "172.24.140.131:12345"
 	//addr = "127.0.0.1:12345"
 	opts := Opts{}
-	opts.MoveTimes = int64(10)
+	opts.MoveTimes = int64(2)
 	opts.AccountId = "2"
 	opts.WatchEnabled = true
-	err := start(addr, opts)
-	if err != nil {
-		fmt.Printf("start fail:%+v", err)
+	//err := start(addr, opts)
+	//if err != nil {
+	//	fmt.Printf("start fail:%+v", err)
+	//}
+
+	gg := async.NewGoGroup()
+	f := func(opts Opts) func(context.Context) {
+		return func(_ context.Context) {
+			fmt.Println("start:", addr, opts)
+			err := start(addr, opts)
+			if err != nil {
+				fmt.Printf("start fail:%+v", err)
+			}
+		}
 	}
+	for i := 1; i < 100; i++ {
+		opts.AccountId = strconv.Itoa(i)
+		gg.Go(f(opts))
+	}
+	gg.Wait()
 	//loginRes := client.SendWithRes(getReqObject("login", nil))
 	//loginMsg := client.Parse(loginRes.Msg)
 	//uid := loginMsg["uid"].(float64)
@@ -56,6 +73,7 @@ func TestProxyTCP(t *testing.T) {
 //		return client.Rec()
 //	}
 func start(addr string, opts Opts) error {
+	var m = &Module{}
 	var err error
 	err = m.Connect(addr)
 	if err != nil {
@@ -86,11 +104,12 @@ func start(addr string, opts Opts) error {
 		//msg := map[string]interface{}{}
 		//msg["location"] = location
 		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
-		randSleep := time.Duration(rand.New(rs).Intn(6000))
-		time.Sleep(time.Millisecond * randSleep)
+		//randSleep := time.Duration(rand.New(rs).Intn(6000))
+		//time.Sleep(time.Millisecond * randSleep)
 	}
 	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
 	time.Sleep(time.Millisecond * 1000)
+	m.Close()
 	return err
 }
 

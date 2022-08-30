@@ -60,7 +60,7 @@ func (m *Module) Exports() modules.Exports {
 }
 
 func init() {
-	modules.Register("k6/x/tcp", &RootModule{})
+	modules.Register("k6/x/tcp", new(RootModule))
 }
 
 func (m *Module) Connect(addr string) error {
@@ -89,10 +89,16 @@ func (m *Module) StartOnRec(onRec func(res *proxy.Response)) {
 	m.onRec = onRec
 	async.GoRaw(func() {
 		for {
+			if m.onRec == nil {
+				return
+			}
 			res, _ := m.Rec()
 			//fmt.Printf("[%v]::for onRec, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.ToString(res.Msg))
 			if m.onRec != nil {
 				m.onRec(res)
+			} else {
+				fmt.Printf("stop rec!! \n")
+				return
 			}
 			//time.Sleep(time.Millisecond * 10)
 		}
@@ -215,8 +221,13 @@ func (m *Module) SendWithRes(reqJson *proxy.Request) (*proxy.Response, error) {
 	return m.Rec()
 }
 
-func (m *Module) Close() error {
-	return m.conn.Close()
+func (m *Module) Close() {
+	m.onRec = nil
+	err := m.conn.Close()
+	if err != nil {
+		debug.PrintStack()
+		fmt.Printf("close fail:%+v", errors.WithStack(err))
+	}
 }
 
 var ID = uint32(0)
@@ -356,8 +367,8 @@ func (m *Module) Start(addr string, opts Opts) error {
 		//msg := map[string]interface{}{}
 		//msg["location"] = location
 		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
-		randSleep := time.Duration(rand.New(rs).Intn(6000))
-		time.Sleep(time.Millisecond * randSleep)
+		//randSleep := time.Duration(rand.New(rs).Intn(1000))
+		//time.Sleep(time.Millisecond * randSleep)
 	}
 	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
 	time.Sleep(time.Millisecond * 1000)

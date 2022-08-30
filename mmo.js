@@ -35,6 +35,7 @@ export default function () {
 
     function onRec(msg) {
         console.log('onRec:', msg);
+        recCounter.add(1);
         epDataRecv.add(JSON.stringify(msg).length);
     }
 
@@ -61,10 +62,11 @@ export default function () {
         epDataSent.add(JSON.stringify(reqJson).length);
         try{
             m.send(reqJson);
+            sendCounter.add(1);
         }catch (e){
-            console.log('[js] send fail: ', e)
+            console.log('[js] send fail: ', e);
+            errCounter.add(1);
         }
-        // sendCounter.add(1);
         // return reqJson.id;
         // if (name === "event"){
         //     return null;
@@ -103,7 +105,7 @@ export default function () {
         return;
     }
     console.log('login success:', __VU, uid, typeof (uid));
-    m.startOnRec(onRec);
+    // m.startOnRec(onRec);
     invokeApi("event");
     for (let j = 0; j < move_times; j++) {
         let location = {
@@ -119,9 +121,9 @@ export default function () {
         invokeApi("move", {location});
         sleep(1);
     }
-    // m.send(m.GetReqObject("leave", {uid}))
+    invokeApi("leave", {uid});
     // m.close();
-    sleep(2);
+    sleep(1);
 }
 
 export function teardown() {

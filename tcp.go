@@ -22,12 +22,11 @@ import (
 
 type (
 	Module struct {
-		vu        modules.VU
-		conn      net.Conn
-		onRec     func(res *proxy.Response)
-		opts      map[string]interface{}
-		apiDataS  ApiDataS
-		closeChan chan struct{}
+		vu       modules.VU
+		conn     net.Conn
+		onRec    func(res *proxy.Response)
+		opts     map[string]interface{}
+		apiDataS ApiDataS
 	}
 	RootModule struct{}
 	ApiDataS   struct {
@@ -227,13 +226,12 @@ func (m *Module) SendWithRes(reqJson *proxy.Request) (*proxy.Response, error) {
 }
 
 func (m *Module) Close() {
-	m.closeChan <- struct{}{}
 	//m.onRec = nil
-	//err := m.conn.Close()
-	//if err != nil {
-	//	debug.PrintStack()
-	//	fmt.Printf("close fail:%+v", errors.WithStack(err))
-	//}
+	err := m.conn.Close()
+	if err != nil {
+		debug.PrintStack()
+		fmt.Printf("close fail:%+v", errors.WithStack(err))
+	}
 }
 
 var ID = uint32(0)

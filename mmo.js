@@ -2,6 +2,12 @@ import m from 'k6/x/tcp';
 import {Counter} from 'k6/metrics';
 import {sleep} from 'k6';
 
+const epDataSent = new Counter('endpoint_data_sent');
+const epDataRecv = new Counter('endpoint_data_recv');
+const errCounter = new Counter('errCounter');
+const sendCounter = new Counter('sendCounter');
+const recCounter = new Counter('recCounter');
+
 let addr = '172.24.140.131:12345';
 // addr = '10.0.0.3:12345';
 // addr = '127.0.0.1:12345';
@@ -19,6 +25,7 @@ export const options = {
     }
 };
 let apiJson = JSON.parse(open('./config/apiData.json'));
+
 export function setup() {
     console.log('setup');
 }
@@ -28,8 +35,10 @@ export default function () {
 
     function onRec(msg) {
         console.log('onRec:', msg);
+        epDataRecv.add(JSON.stringify(msg).length);
     }
-    const move_times = 100;
+
+    const move_times = 10;
     // const opts = {
     //     move_times,
     //     account_id: __VU + 10000,
@@ -37,7 +46,7 @@ export default function () {
     // }
     // client.start(addr, opts);
 
-        let getInvoKeApiJson = function(name ,msg){
+    let getInvoKeApiJson = function (name, msg) {
         const reqJson = apiJson[name];
         reqJson.id = ++i;
         if (msg) {
@@ -49,8 +58,12 @@ export default function () {
     let invokeApi = function (name, msg) {
         let reqJson = getInvoKeApiJson(name, msg);
         console.log(new Date(), ':reqJson:', reqJson);
-        // epDataSent.add(JSON.stringify(reqJson).length);
-        m.send(reqJson);
+        epDataSent.add(JSON.stringify(reqJson).length);
+        try{
+            m.send(reqJson);
+        }catch (e){
+            console.log('[js] send fail: ', e)
+        }
         // sendCounter.add(1);
         // return reqJson.id;
         // if (name === "event"){
@@ -64,32 +77,32 @@ export default function () {
         // return res;
     }
 
+    sleep(1);
     m.connect(addr);
-        console.log('mmmmmmmmmmmm:',m)
     // m.init();
     // let uid = m.login(__VU);
-    const account_id = ""+__VU;
-    invokeApi("login",{account_id, 'account_token':'123456'});
+    const account_id = "" + __VU;
+    invokeApi("login", {account_id, 'account_token': '123456'});
     const loginInfo = m.rec();
-    if(!loginInfo || !loginInfo.result){
-        console.log('[js]login fail', __VU, loginInfo);
+    if (!loginInfo || !loginInfo.result) {
+        console.log('[js]login fail by loginInfo', __VU, loginInfo);
         // m.close();
         return;
     }
     let uid;
-    try{
+    try {
         uid = m.parse(loginInfo.msg).uid;
-    }catch (e) {
-        console.log("[js]parse fail", e);
+    } catch (e) {
+        console.log("[js]parse fail by parse", e, loginInfo);
         // m.close();
         return;
     }
-    if(!uid){
-        console.log('[js]login fail', __VU, uid);
+    if (!uid || typeof (uid) != 'number') {
+        console.log('[js]login fail by uid', __VU, uid);
         // m.close();
         return;
     }
-    console.log('login success:',__VU, uid);
+    console.log('login success:', __VU, uid, typeof (uid));
     m.startOnRec(onRec);
     invokeApi("event");
     for (let j = 0; j < move_times; j++) {

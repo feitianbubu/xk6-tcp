@@ -9,7 +9,6 @@ import (
 	"os"
 	"runtime/debug"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.k6.io/k6/js/modules"
@@ -23,11 +22,12 @@ import (
 
 type (
 	Module struct {
-		vu       modules.VU
-		conn     net.Conn
-		onRec    func(res *proxy.Response)
-		opts     map[string]interface{}
-		apiDataS ApiDataS
+		vu        modules.VU
+		conn      net.Conn
+		onRec     func(res *proxy.Response)
+		opts      map[string]interface{}
+		apiDataS  ApiDataS
+		closeChan chan struct{}
 	}
 	RootModule struct{}
 	ApiDataS   struct {
@@ -92,9 +92,12 @@ func (m *Module) StartOnRec(onRec func(res *proxy.Response)) {
 			if m.onRec == nil {
 				return
 			}
-			res, _ := m.Rec()
-			//fmt.Printf("[%v]::for onRec, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.ToString(res.Msg))
-			if m.onRec != nil {
+			res, err := m.Rec()
+			if err != nil {
+				fmt.Printf("[%v]::for onRec fail,err:%+v, res:%+v \n", time.Now(), err, res)
+			}
+			fmt.Printf("[%v]::for onRec, res.ID:%+v, method:%v, msg:%+v, err:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.ToString(res.Msg), err)
+			if m.onRec != nil && res != nil {
 				m.onRec(res)
 			} else {
 				fmt.Printf("stop rec!! \n")
@@ -148,8 +151,10 @@ func (m *Module) Send(reqAny any) error {
 			req.Metadata = createMd(metadata)
 		}
 	default:
-		debug.PrintStack()
-		return errors.WithStack(fmt.Errorf("send fail by invalid req:%+v", reqAny))
+		err = errors.WithStack(fmt.Errorf("send fail by invalid req:%+v", reqAny))
+		fmt.Println(err)
+		//debug.PrintStack()
+		return err
 	}
 
 	//fmt.Printf("[%v]::req, req.ID:%+v, method:%v, msg:%+v \n", time.Now(), req.ID, m.ToString(req.Method), m.Parse(req.Msg))
@@ -222,12 +227,13 @@ func (m *Module) SendWithRes(reqJson *proxy.Request) (*proxy.Response, error) {
 }
 
 func (m *Module) Close() {
-	m.onRec = nil
-	err := m.conn.Close()
-	if err != nil {
-		debug.PrintStack()
-		fmt.Printf("close fail:%+v", errors.WithStack(err))
-	}
+	m.closeChan <- struct{}{}
+	//m.onRec = nil
+	//err := m.conn.Close()
+	//if err != nil {
+	//	debug.PrintStack()
+	//	fmt.Printf("close fail:%+v", errors.WithStack(err))
+	//}
 }
 
 var ID = uint32(0)
@@ -239,8 +245,8 @@ func (m *Module) GetReqObject(name string, options ...func(map[string]interface{
 		fmt.Printf("GetRequestFromJson fail, err:%+v \n", errors.WithStack(err))
 		return nil
 	}
-	atomic.AddUint32(&ID, 1)
-	req.ID = ID
+	//atomic.AddUint32(&ID, 1)
+	//req.ID = ID
 	msg := map[string]interface{}{}
 	err = json.Unmarshal(req.Msg, &msg)
 	if err != nil {

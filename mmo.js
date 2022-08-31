@@ -40,80 +40,55 @@ export default function () {
         recCounter.add(1);
         epDataRecv.add(JSON.stringify(msg).length);
     }
-    function onRes(msg) {
-        console.log('onRes:', msg);
-        recCounter.add(1);
-        epDataRecv.add(JSON.stringify(msg).length);
-    }
 
     const move_times = 10;
-    // const opts = {
-    //     move_times,
-    //     account_id: __VU + 10000,
-    //     watch_enabled: true
-    // }
-    // client.start(addr, opts);
 
     let getInvoKeApiJson = function (name, msg) {
         const reqJson = apiJson[name];
-        reqJson.id = ++i;
+        if (name != "event") {
+            // 不需要response的不加id
+            reqJson.id = ++i;
+        } else {
+            reqJson.id = 0;
+        }
         if (msg) {
             reqJson.msg = msg;
         }
         reqJson.msg = reqJson.msg || {};
         return reqJson;
     }
-    let invokeApi = function (name, msg) {
-        let reqJson = getInvoKeApiJson(name, msg);
-        console.log(new Date(), ':reqJson:', reqJson);
+    let invokeApi = function (name, msgJson) {
+        let reqJson = getInvoKeApiJson(name, msgJson);
+        // console.log(new Date(), ':reqJson:', reqJson);
         epDataSent.add(JSON.stringify(reqJson).length);
-        try {
-            m.send(reqJson);
-            sendCounter.add(1);
-        } catch (e) {
-            console.log('[js] send fail: ', e);
-            errCounter.add(1);
-        }
-        // return reqJson.id;
-        // if (name === "event"){
-        //     return null;
+        // try {
+        let res = m.send(reqJson);
+        sendCounter.add(1);
+        return res;
+        // } catch (e) {
+        //     console.log('[js] send fail: ', e);
+        //     errCounter.add(1);
         // }
-        // const res = client.getResChan();
-        // // console.log('res111:', client.toString(res.method), client.toString(res.msg));
-        // // console.log('res222:', client.parse(res.msg));
-        // epDataRecv.add(JSON.stringify(res).length);
-        // recCounter.add(1);
-        // return res;
     }
 
     sleep(1);
     m.connect(addr);
-    // m.init();
-    // let uid = m.login(__VU);
+    // m.connectOnRec(addr, onRec);
     const account_id = "" + __VU;
-    invokeApi("login", {account_id, 'account_token': '123456'});
-    const loginInfo = m.rec();
+    const loginInfo = invokeApi("login", {account_id, 'account_token': '123456'});
     if (!loginInfo || !loginInfo.result) {
         console.log('[js]login fail by loginInfo', __VU, loginInfo);
         // m.close();
         return;
     }
-    let uid;
-    try {
-        uid = m.parse(loginInfo.msg).uid;
-    } catch (e) {
-        console.log("[js]parse fail by parse", e, loginInfo);
-        // m.close();
-        return;
-    }
+    let uid = loginInfo.msg.uid;
+
     if (!uid || typeof (uid) != 'number') {
         console.log('[js]login fail by uid', __VU, uid);
         // m.close();
         return;
     }
-    console.log('login success:', __VU, uid, typeof (uid));
-    m.startOnRes(onRes);
-    m.startOnRec(onRec);
+    console.log('login success:', __VU, uid);
     invokeApi("event");
     for (let j = 0; j < move_times; j++) {
         let location = {
@@ -131,7 +106,7 @@ export default function () {
     }
     invokeApi("leave", {uid});
     // m.close();
-    sleep(1);
+    // sleep(1);
 }
 
 export function teardown() {

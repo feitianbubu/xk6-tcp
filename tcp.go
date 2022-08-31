@@ -24,8 +24,8 @@ type (
 	Module struct {
 		vu       modules.VU
 		conn     net.Conn
-		onRec    func(res *proxy.Response)
-		onRes    func(res *proxy.Response)
+		onRec    func(res Res)
+		resChan  chan Res
 		opts     map[string]interface{}
 		apiDataS ApiDataS
 	}
@@ -40,7 +40,26 @@ type (
 		Metadata map[string]interface{}
 		Msg      map[string]interface{}
 	}
+	Res struct {
+		ID       uint32
+		Result   bool
+		Method   string
+		Msg      map[string]interface{}
+		Metadata map[string]interface{}
+	}
 )
+
+func ParseRes(res proxy.Response) Res {
+	r := Res{}
+	r.ID = res.ID
+	r.Result = res.Result
+	//if len(res.Method) >= 0 {
+	r.Method = fmt.Sprintf("%s", res.Method)
+	//}
+	r.Msg = parse(res.Msg)
+	r.Metadata = parse(res.Metadata)
+	return r
+}
 
 // Ensure the interfaces are implemented correctly.
 var (
@@ -69,10 +88,12 @@ func (m *Module) Connect(addr string) error {
 		return fmt.Errorf("conn Connect fail: %s \n", err.Error())
 	}
 	m.conn = conn
+	m.resChan = make(chan Res)
+	m.StartOnRec()
 	return nil
 }
 
-func (m *Module) ConnectOnRec(addr string, onRec func(res *proxy.Response)) error {
+func (m *Module) ConnectOnRec(addr string, onRec func(res Res)) error {
 	err := m.Connect(addr)
 	if err != nil {
 		return errors.WithStack(err)
@@ -80,42 +101,25 @@ func (m *Module) ConnectOnRec(addr string, onRec func(res *proxy.Response)) erro
 	m.onRec = onRec
 	return nil
 }
-func (m *Module) StartOnRes(onRes func(res *proxy.Response)) {
-	m.onRes = onRes
-}
-func (m *Module) StartOnRec(onRec func(res *proxy.Response)) {
+func (m *Module) StartOnRec() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("=====StartOnRec panic=====%+v \n", r)
 		}
 	}()
-	m.onRec = onRec
 	async.GoRaw(func() {
 		for {
-			if m.onRec == nil {
-				return
-			}
 			res, err := m.Rec()
 			if err != nil {
 				fmt.Printf("[%v]::for onRec fail,err:%+v, res:%+v \n", time.Now(), err, res)
-			} else {
-				fmt.Printf("[%v]::for onRec, res.ID:%+v, method:%v, msg:%+v, err:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.ToString(res.Msg), err)
 			}
-			//if m.onRec != nil && res != nil {
-			//	m.onRec(res)
-			//} else {
-			//	fmt.Printf("stop rec!! \n")
-			//	return
-			//}
 			if res.ID == 0 {
 				// 通知走回调
 				if m.onRec != nil {
 					m.onRec(res)
 				}
 			} else {
-				if m.onRes != nil {
-					m.onRes(res)
-				}
+				m.resChan <- res
 			}
 		}
 	})
@@ -137,20 +141,22 @@ func createMd(m map[string]interface{}) binary.BytesWithUint16Len {
 
 var codec = &proxy.Codec{}
 
-func (m *Module) Send(reqAny any) error {
+func (m *Module) Send(reqAny any) (Res, error) {
+	var res Res
 	var err error
 	conn := m.conn
 	if conn == nil {
-		return fmt.Errorf("conn is nil")
+		return res, fmt.Errorf("conn is nil")
 	}
-
 	req := &proxy.Request{}
 	switch v := reqAny.(type) {
 	case *proxy.Request:
 		req = v
 	case map[string]interface{}:
-		id := v["id"].(int64)
-		req.ID = uint32(id)
+		id, ok := v["id"].(int64)
+		if ok {
+			req.ID = uint32(id)
+		}
 		method := v["method"].(string)
 		req.Method = []byte(method)
 		msg := v["msg"].(map[string]interface{})
@@ -167,45 +173,61 @@ func (m *Module) Send(reqAny any) error {
 		err = errors.WithStack(fmt.Errorf("send fail by invalid req:%+v", reqAny))
 		fmt.Println(err)
 		//debug.PrintStack()
-		return err
+		return res, err
 	}
 
 	//fmt.Printf("[%v]::req, req.ID:%+v, method:%v, msg:%+v \n", time.Now(), req.ID, m.ToString(req.Method), m.Parse(req.Msg))
 	fmt.Printf("+%v", req.ID)
 	if req.Method == nil || len(req.Method) == 0 {
-		return errors.WithStack(fmt.Errorf("req is invalid, req: %+v \n", req))
+		return res, errors.WithStack(fmt.Errorf("req is invalid, req: %+v \n", req))
 	}
 	err = codec.Encode(conn, req)
 	if err != nil {
-		return fmt.Errorf("send fail: %s \n", err.Error())
+		return res, fmt.Errorf("send fail: %s \n", err.Error())
 	}
-	return nil
+	if req.ID == 0 {
+		return res, nil
+	}
+	for {
+		select {
+		case res := <-m.resChan:
+			if res.ID != req.ID {
+				continue
+			}
+			//fmt.Printf("sendWithRes: %+v \n", res)
+			return res, nil
+		case <-time.After(time.Second * 3):
+			return res, fmt.Errorf("sendWithRes timeout, req:%+v \n", m.ToString(req))
+		}
+	}
 }
 
-func (m *Module) Decode(r io.Reader) (*proxy.Response, error) {
+func (m *Module) Decode(r io.Reader) (Res, error) {
+	var res Res
 	var h uint32
 	//fmt.Println("read h")
 	if err := binary.Read(r, binary.LittleEndian, &h); err != nil {
-		return nil, err
+		return res, err
 	}
 
 	//fmt.Println("read res", h)
-	var res proxy.Response
-	err := binary.Read(r, binary.LittleEndian, &res)
+	resBase := proxy.Response{}
+	err := binary.Read(r, binary.LittleEndian, &resBase)
 	//fmt.Printf("decode:%+v, err:%+v \n", res, err)
-
-	return &res, err
+	res = ParseRes(resBase)
+	return res, err
 }
 
-func (m *Module) Rec() (*proxy.Response, error) {
+func (m *Module) Rec() (Res, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("=====Rec panic=====%+v \n", r)
 		}
 	}()
+	var res Res
 	conn := m.conn
 	if conn == nil {
-		return nil, fmt.Errorf("conn is nil")
+		return res, fmt.Errorf("conn is nil")
 	}
 	//fmt.Printf("[%v]::codec.Decode,start \n", time.Now())
 	//v2, err := m.Decode(conn)
@@ -214,29 +236,23 @@ func (m *Module) Rec() (*proxy.Response, error) {
 	//fmt.Printf("[%v]:: m.Decode, v:%+v, err:%+v  \n", time.Now(), v, err)
 }
 
-func (m *Module) Stringify(obj any) string {
-	fmt.Printf("stringify: %+v \n", obj)
-	return fmt.Sprintf("%s", obj)
-}
-func (m *Module) Parse(bytes []byte) map[string]interface{} {
+func parse(bytes []byte) map[string]interface{} {
 	resMap := make(map[string]interface{})
+	if len(bytes) == 0 {
+		return resMap
+	}
 	err := json.Unmarshal(bytes, &resMap)
 	if err != nil {
-		fmt.Printf("parse fail: bytes:%+v, msg:%s", bytes, bytes)
-		debug.PrintStack()
+		fmt.Printf("parse fail: bytes:%+v, msg:%s, err:%+v", bytes, bytes, errors.WithStack(err))
+		//debug.PrintStack()
 	}
 	return resMap
 }
+func (m *Module) Parse(bytes []byte) map[string]interface{} {
+	return parse(bytes)
+}
 func (m *Module) ToString(data any) string {
 	return fmt.Sprintf("%s", data)
-}
-
-func (m *Module) SendWithRes(reqJson *proxy.Request) (*proxy.Response, error) {
-	err := m.Send(reqJson)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return m.Rec()
 }
 
 func (m *Module) Close() {
@@ -322,17 +338,24 @@ func (m *Module) GetRequestFromJson(name string) (*proxy.Request, error) {
 
 func (m *Module) Login(accountId string) (float64, error) {
 	req := m.GetReqObject("login", SetMsg("account_id", accountId))
-	res, err := m.SendWithRes(req)
+	if req.ID == 0 {
+		req.ID = 1
+	}
+	res, err := m.Send(req)
 	if err != nil {
+		fmt.Printf("login fail by SendWithRes err:%+v", errors.WithStack(err))
 		return 0, errors.WithStack(err)
 	}
 
-	fmt.Printf("[%v]:login, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.Parse(res.Msg))
+	fmt.Printf("[%v]:login, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, res.Method, res.Msg)
 	if !res.Result {
 		return 0, fmt.Errorf("login fail by:%s", req.Msg)
 	}
-	msg := m.Parse(res.Msg)
-	uid := msg["uid"].(float64)
+	msg := res.Msg
+	uid, ok := msg["uid"].(float64)
+	if !ok {
+		fmt.Printf("login parse uid fail: req.Msg:%s", req.Msg)
+	}
 	return uid, nil
 }
 
@@ -366,7 +389,7 @@ func (m *Module) Start(addr string, opts Opts) error {
 	}
 	//m.StartOnRec(m.OnRec)
 	if opts.WatchEnabled {
-		err := m.Send(m.GetReqObject("event"))
+		_, err := m.Send(m.GetReqObject("event"))
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -379,11 +402,11 @@ func (m *Module) Start(addr string, opts Opts) error {
 		location["y"] = rand.New(rs).Intn(100)
 		//msg := map[string]interface{}{}
 		//msg["location"] = location
-		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
+		_, err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
 		randSleep := time.Duration(rand.New(rs).Intn(100))
 		time.Sleep(time.Millisecond * randSleep)
 	}
-	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
+	_, err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
 	time.Sleep(time.Millisecond * 1000)
 	return err
 }
@@ -393,13 +416,8 @@ func SetMsg(key string, value interface{}) func(map[string]interface{}) {
 	}
 }
 
-func (m *Module) OnRec(res *proxy.Response) {
+func (m *Module) OnRec(res Res) {
 	fmt.Printf("#%v", res.ID)
 	//m.Parse(res.Msg)
-	fmt.Printf("[%v]::onRec, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.Parse(res.Msg))
-}
-func (m *Module) OnRes(res *proxy.Response) {
-	fmt.Printf("-%v", res.ID)
-	//m.Parse(res.Msg)
-	fmt.Printf("[%v]::OnRes, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.Parse(res.Msg))
+	fmt.Printf("[%v]::onRec, res:%+v \n", time.Now(), res)
 }

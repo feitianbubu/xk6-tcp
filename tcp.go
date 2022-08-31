@@ -25,6 +25,7 @@ type (
 		vu       modules.VU
 		conn     net.Conn
 		onRec    func(res *proxy.Response)
+		onRes    func(res *proxy.Response)
 		opts     map[string]interface{}
 		apiDataS ApiDataS
 	}
@@ -79,6 +80,9 @@ func (m *Module) ConnectOnRec(addr string, onRec func(res *proxy.Response)) erro
 	m.onRec = onRec
 	return nil
 }
+func (m *Module) StartOnRes(onRes func(res *proxy.Response)) {
+	m.onRes = onRes
+}
 func (m *Module) StartOnRec(onRec func(res *proxy.Response)) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -94,15 +98,25 @@ func (m *Module) StartOnRec(onRec func(res *proxy.Response)) {
 			res, err := m.Rec()
 			if err != nil {
 				fmt.Printf("[%v]::for onRec fail,err:%+v, res:%+v \n", time.Now(), err, res)
-			}
-			fmt.Printf("[%v]::for onRec, res.ID:%+v, method:%v, msg:%+v, err:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.ToString(res.Msg), err)
-			if m.onRec != nil && res != nil {
-				m.onRec(res)
 			} else {
-				fmt.Printf("stop rec!! \n")
-				return
+				fmt.Printf("[%v]::for onRec, res.ID:%+v, method:%v, msg:%+v, err:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.ToString(res.Msg), err)
 			}
-			//time.Sleep(time.Millisecond * 10)
+			//if m.onRec != nil && res != nil {
+			//	m.onRec(res)
+			//} else {
+			//	fmt.Printf("stop rec!! \n")
+			//	return
+			//}
+			if res.ID == 0 {
+				// 通知走回调
+				if m.onRec != nil {
+					m.onRec(res)
+				}
+			} else {
+				if m.onRes != nil {
+					m.onRes(res)
+				}
+			}
 		}
 	})
 }
@@ -350,7 +364,7 @@ func (m *Module) Start(addr string, opts Opts) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	m.StartOnRec(m.OnRec)
+	//m.StartOnRec(m.OnRec)
 	if opts.WatchEnabled {
 		err := m.Send(m.GetReqObject("event"))
 		if err != nil {
@@ -366,8 +380,8 @@ func (m *Module) Start(addr string, opts Opts) error {
 		//msg := map[string]interface{}{}
 		//msg["location"] = location
 		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
-		//randSleep := time.Duration(rand.New(rs).Intn(1000))
-		//time.Sleep(time.Millisecond * randSleep)
+		randSleep := time.Duration(rand.New(rs).Intn(100))
+		time.Sleep(time.Millisecond * randSleep)
 	}
 	err = m.Send(m.GetReqObject("leave", SetMsg("uid", uid)))
 	time.Sleep(time.Millisecond * 1000)
@@ -380,7 +394,12 @@ func SetMsg(key string, value interface{}) func(map[string]interface{}) {
 }
 
 func (m *Module) OnRec(res *proxy.Response) {
+	fmt.Printf("#%v", res.ID)
+	//m.Parse(res.Msg)
+	fmt.Printf("[%v]::onRec, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.Parse(res.Msg))
+}
+func (m *Module) OnRes(res *proxy.Response) {
 	fmt.Printf("-%v", res.ID)
-	m.Parse(res.Msg)
-	//fmt.Printf("[%v]::onRec, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.Parse(res.Msg))
+	//m.Parse(res.Msg)
+	fmt.Printf("[%v]::OnRes, res.ID:%+v, method:%v, msg:%+v \n", time.Now(), res.ID, m.ToString(res.Method), m.Parse(res.Msg))
 }

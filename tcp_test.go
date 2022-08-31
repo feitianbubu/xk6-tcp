@@ -29,9 +29,9 @@ func TestProxyTCP(t *testing.T) {
 
 	//client.Connect("172.24.140.131:12345")
 	addr := "172.24.140.131:12345"
-	//addr = "127.0.0.1:12345"
+	addr = "127.0.0.1:12345"
 	opts := Opts{}
-	opts.MoveTimes = int64(2)
+	opts.MoveTimes = int64(10)
 	opts.AccountId = "2"
 	opts.WatchEnabled = true
 	//err := start(addr, opts)
@@ -92,6 +92,7 @@ func start(addr string, opts Opts) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	m.StartOnRes(m.OnRes)
 	m.StartOnRec(m.OnRec)
 	if opts.WatchEnabled {
 		err := m.Send(m.GetReqObject("event"))
@@ -107,7 +108,12 @@ func start(addr string, opts Opts) error {
 		location["y"] = rand.New(rs).Intn(100)
 		//msg := map[string]interface{}{}
 		//msg["location"] = location
-		err = m.Send(m.GetReqObject("move", SetMsg("location", location)))
+		req := m.GetReqObject("move", SetMsg("location", location))
+		req.ID = 1
+
+		//fmt.Println("req:::::::", req)
+		err = m.Send(req)
+
 		//randSleep := time.Duration(rand.New(rs).Intn(6000))
 		//time.Sleep(time.Millisecond * randSleep)
 	}
@@ -115,7 +121,7 @@ func start(addr string, opts Opts) error {
 	//atomic.AddUint32(&ID, 1)
 	//req.ID = ID
 	err = m.Send(req)
-	time.Sleep(time.Millisecond * 1000)
+	time.Sleep(time.Millisecond * 3000)
 	m.Close()
 	return err
 }

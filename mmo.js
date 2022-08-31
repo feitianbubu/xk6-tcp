@@ -10,13 +10,14 @@ const recCounter = new Counter('recCounter');
 
 let addr = '172.24.140.131:12345';
 // addr = '10.0.0.3:12345';
-// addr = '127.0.0.1:12345';
+addr = '127.0.0.1:12345';
 
 export const options = {
     // vus: 400,
     // duration: '300s',
     scenarios: {
-        example_scenario: {
+        // 场景-登录移动
+        scenario: {
             executor: 'shared-iterations',
             vus: 1,
             iterations: 1,
@@ -27,6 +28,7 @@ export const options = {
 let apiJson = JSON.parse(open('./config/apiData.json'));
 
 export function setup() {
+    // 全局初始化
     console.log('setup');
 }
 
@@ -35,6 +37,11 @@ export default function () {
 
     function onRec(msg) {
         console.log('onRec:', msg);
+        recCounter.add(1);
+        epDataRecv.add(JSON.stringify(msg).length);
+    }
+    function onRes(msg) {
+        console.log('onRes:', msg);
         recCounter.add(1);
         epDataRecv.add(JSON.stringify(msg).length);
     }
@@ -60,10 +67,10 @@ export default function () {
         let reqJson = getInvoKeApiJson(name, msg);
         console.log(new Date(), ':reqJson:', reqJson);
         epDataSent.add(JSON.stringify(reqJson).length);
-        try{
+        try {
             m.send(reqJson);
             sendCounter.add(1);
-        }catch (e){
+        } catch (e) {
             console.log('[js] send fail: ', e);
             errCounter.add(1);
         }
@@ -105,7 +112,8 @@ export default function () {
         return;
     }
     console.log('login success:', __VU, uid, typeof (uid));
-    // m.startOnRec(onRec);
+    m.startOnRes(onRes);
+    m.startOnRec(onRec);
     invokeApi("event");
     for (let j = 0; j < move_times; j++) {
         let location = {
@@ -127,5 +135,6 @@ export default function () {
 }
 
 export function teardown() {
+    // 全局反初始化
     console.log('teardown');
 }

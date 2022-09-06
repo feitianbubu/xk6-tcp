@@ -40,5 +40,21 @@
   },
   "logout": {
     "method": "tevat.example.auth.Auth/Logout"
+  },
+  "rankUpdate": {
+    "method": "tevat.example.rank.Rank/Update",
+    "msg": {
+      "rank_type": 0,
+      "period": 0,
+      "single_score": 0,
+      "total_score": 0
+    }
+  },
+  "rankInfo": {
+    "method": "tevat.example.rank.Rank/Info",
+    "msg": {
+      "limit": 3,
+      "offset": 1
+    }
   }
 }

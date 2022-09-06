@@ -112,6 +112,7 @@ func (m *Module) StartOnRec() {
 			res, err := m.Rec()
 			if err != nil {
 				fmt.Printf("[%v]::for onRec fail,err:%+v, res:%+v \n", time.Now(), err, res)
+				time.Sleep(time.Second)
 			}
 			if res.ID == 0 {
 				// 通知走回调
@@ -138,6 +139,22 @@ func createMd(m map[string]interface{}) binary.BytesWithUint16Len {
 	b, _ := proto.Marshal(md)
 	return b
 }
+
+//func createMsg(m map[string]interface{}) binary.BytesWithUint32Len {
+//	//metadata := make(map[string]*proto.Message)
+//	var v proto.Message
+//	v1 := v.ProtoReflect().New()
+//	for k, v := range m {
+//		metadata[k] = &proto.Message{
+//			Values: []string{fmt.Sprintf("%v", v)},
+//		}
+//	}
+//	md := &pb.Metadata{
+//		Metadata: metadata,
+//	}
+//	b, _ := proto.Marshal(v1)
+//	return b
+//}
 
 var codec = &proxy.Codec{}
 

@@ -9,8 +9,8 @@ const sendCounter = new Counter('sendCounter');
 const recCounter = new Counter('recCounter');
 
 let addr = '172.24.140.131:12345';
+addr = '127.0.0.1:12345';
 // addr = '10.0.0.3:12345';
-// addr = '127.0.0.1:12345';
 
 export const options = {
     // vus: 400,
@@ -51,10 +51,13 @@ export default function () {
         } else {
             reqJson.id = 0;
         }
-        if (msg) {
-            reqJson.msg = msg;
-        }
         reqJson.msg = reqJson.msg || {};
+        if (msg) {
+            for(const k in msg){
+                reqJson.msg[k] = msg[k]
+            }
+        }
+
         return reqJson;
     }
     let invokeApi = function (name, msgJson) {
@@ -63,6 +66,7 @@ export default function () {
         epDataSent.add(JSON.stringify(reqJson).length);
         // try {
         let res = m.send(reqJson);
+        console.log(new Date(), ':resJson:', res);
         sendCounter.add(1);
         return res;
         // } catch (e) {
@@ -88,25 +92,13 @@ export default function () {
         // m.close();
         return;
     }
+    // invokeApi("info");
+    const single_score = __VU*10
+    const total_score = __VU*100
+    invokeApi("rankUpdate", {single_score, total_score});
+    invokeApi("rankInfo");
     console.log('login success:', __VU, uid);
-    if (__VU==1){
-        invokeApi("event");
-    }
-    for (let j = 0; j < move_times; j++) {
-        let location = {
-            uid,
-            "x": 1,
-            "y": 1
-        }
-        // let msg = {
-        //     "id": i++,
-        //     "method": "/tevat.example.scene.Scene/Move",
-        //     "msg": {location}
-        // }
-        invokeApi("move", {location});
-        sleep(1);
-    }
-    invokeApi("leave", {uid});
+    // invokeApi("event");
     // m.close();
     // sleep(1);
 }

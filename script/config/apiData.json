@@ -1,0 +1,75 @@
+{
+  "login": {
+    "method": "/tevat.example.auth.Auth/login",
+    "msg": {"account_id":"1","account_token":"123456"}
+  },
+  "loginLP": {
+    "method": "/api/v1/login",
+    "msg": {
+      "userAddress": "0x279A4C36098c4e76182706511AB0346518ad6049",
+      "content": "1659516267",
+      "signature": "0xd5f2199e375be586e78e454595047edfe6688989a674eca1dc847658aa387e041ceed79ca17be21bd6c6541822ea87e1bf1f3a73cbdf3c0d76bc176a523584b600"
+    }
+  },
+  "info": {
+    "method": "/tevat.example.logic.Logic/Info",
+    "msg": {},
+    "metadata": {"uid": 1}
+  },
+  "config": {
+    "method": "/api/v1/config"
+  },
+  "event": {
+    "method": "/tevat.example.scene.Scene/WatchEvents"
+  },
+  "move": {
+    "method": "/tevat.example.scene.Scene/Move",
+    "msg": {
+      "location": {
+        "uid": 1,
+        "x": 1,
+        "y": 1
+      }
+    }
+  },
+  "leave": {
+    "method": "/tevat.example.scene.Scene/Leave",
+    "msg": {
+      "uid": 1
+    }
+  },
+  "logout": {
+    "method": "tevat.example.auth.Auth/Logout"
+  },
+  "rankUpdate": {
+    "method": "tevat.example.rank.Rank/Update",
+    "msg": {
+      "rank_type": 0,
+      "period": 0,
+      "single_score": 0,
+      "total_score": 0
+    }
+  },
+  "rankInfo": {
+    "method": "tevat.example.rank.Rank/Info",
+    "msg": {
+      "limit": 3,
+      "offset": 1
+    }
+  },
+  "navFind": {
+    "method": "tevat.example.nav.Nav/Find",
+    "msg": {
+      "org": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "dst": {
+        "x": -10,
+        "y": 0,
+        "z": 10
+      }
+    }
+  }
+}

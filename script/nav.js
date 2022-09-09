@@ -1,28 +1,6 @@
 import client from './client.js'
 
-export const options = {
-    // vus: 400,
-    // duration: '300s',
-    stages: [
-        { duration: '10s', target: 10 },
-        { duration: '10m', target: 10 },
-        { duration: '10s', target: 100 },
-        { duration: '10m', target: 100 },
-        { duration: '10s', target: 500 },
-        { duration: '10m', target: 500 },
-        { duration: '10s', target: 10 },
-        { duration: '10m', target: 10 },
-    ],
-    // scenarios: {
-    //     // 场景-登录移动
-    //     scenario: {
-    //         executor: 'shared-iterations',
-    //         vus: 1,
-    //         iterations: 1,
-    //         gracefulStop: '3s',
-    //     }
-    // }
-};
+export const options = client.options;
 
 export function setup() {
     // 全局初始化
@@ -31,9 +9,12 @@ export function setup() {
 
 export default function () {
    client.login();
+    client.invokeApi("enter");
     for (let j = 0; j < 1000; j++) {
         client.invokeApi("navFind");
     }
+    client.invokeApi("leave");
+    client.m.close();
 }
 
 export function teardown() {

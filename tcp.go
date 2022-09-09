@@ -111,6 +111,10 @@ func (m *Module) StartOnRec() {
 		for {
 			res, err := m.Rec()
 			if err != nil {
+				if errors.As(err, io.EOF) {
+					fmt.Printf("read EOF")
+					return
+				}
 				fmt.Printf("[%v]::for onRec fail,err:%+v, res:%+v \n", time.Now(), err, res)
 				time.Sleep(time.Second)
 			}

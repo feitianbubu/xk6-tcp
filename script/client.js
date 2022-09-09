@@ -12,6 +12,30 @@ let addr = '172.24.140.131:12345';
 // addr = '127.0.0.1:12345';
 // addr = '10.0.0.3:12345';
 
+const options = {
+    // vus: 400,
+    // duration: '300s',
+    stages: [
+        { duration: '10s', target: 10 },
+        { duration: '10m', target: 10 },
+        { duration: '10s', target: 100 },
+        { duration: '10m', target: 100 },
+        { duration: '10s', target: 500 },
+        { duration: '10m', target: 500 },
+        { duration: '10s', target: 10 },
+        { duration: '10m', target: 10 },
+    ],
+    // scenarios: {
+    //     // 场景-登录移动
+    //     scenario: {
+    //         executor: 'shared-iterations',
+    //         vus: 1,
+    //         iterations: 1,
+    //         gracefulStop: '3s',
+    //     }
+    // }
+};
+
 let apiJson = JSON.parse(open('./config/apiData.json'));
 let id = 0;
 function onRec(msg) {
@@ -60,5 +84,6 @@ const client = {
     m,
     login,
     invokeApi,
+    options,
 }
 module.exports = client;

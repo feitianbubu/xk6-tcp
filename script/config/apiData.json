@@ -3,6 +3,9 @@
     "method": "/tevat.example.auth.Auth/login",
     "msg": {"account_id":"1","account_token":"123456"}
   },
+  "enter": {
+    "method": "/tevat.example.logic.Logic/Enter"
+  },
   "loginLP": {
     "method": "/api/v1/login",
     "msg": {
@@ -58,17 +61,17 @@
     }
   },
   "navFind": {
-    "method": "tevat.example.nav.Nav/Find",
+    "method": "tevat.example.scene.Scene/Find",
     "msg": {
       "org": {
-        "x": 0,
-        "y": 0,
-        "z": 0
+        "x": 1,
+        "y": 5,
+        "z": 10
       },
       "dst": {
-        "x": -10,
-        "y": 0,
-        "z": 10
+        "x": 48,
+        "y": 4,
+        "z": 18
       }
     }
   }

@@ -1,0 +1,13 @@
+{
+  "desc": [
+    "proto:服务端proto协议 1:protoBuffer 2:json",
+    "localLogin:是否启用本地登录"
+  ],
+  "proto": 1,
+  "localLogin": true,
+  "protoFileConfig": {
+    "desc": ["proto路径和文件配置"],
+    "path": "../proto",
+    "files": ["auth/auth.proto", "logic/logic.proto", "nav/nav.proto", "rank/rank.proto", "scene/scene.proto", "sdk/gameserver.proto"]
+  }
+}

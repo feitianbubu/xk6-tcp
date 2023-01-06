@@ -1,0 +1,87 @@
+syntax = "proto3";
+package tevat.example.scene;
+
+import "tevat/api/annotations.proto";
+import "scene/scenemsg.proto";
+
+option go_package = "tevat/example/pkg/proto/scene";
+
+
+service Scene {
+  option(tevat.api.proxy_default) = {
+    // 启用proxy转发，客户端可以调用对应接口
+    proxy: ENABLED,
+    // 接口的超时时间为3秒
+    timeout: "3s",
+    // 对客户端协议为PROTOBUF
+    proto: PROTOBUF,
+    // 方法在有别名的情况下不保留原名支持
+    keep_origin: false,
+  };
+
+  // 设置分片相关信息
+  option(tevat.api.shard) = {
+    shard_key_type: STRING,
+    shard_key_location: SESSION,
+    default_shard_field: "sceneId",
+  };
+
+  rpc Info(Empty) returns (InfoResponse) {
+  }
+
+  rpc EnterScene(EnterCellRequest) returns (ObjectsAddNotify) {
+    option(tevat.api.proxy) = {
+      watch: {
+        method: "WatchEvents",
+        event_key_field: "remote",
+      }
+    };
+  }
+
+  rpc Move(MoveRequest) returns (MoveResponse) {
+  }
+
+  rpc FindPath(FindPathRequest) returns (FindPathResponse) {
+  }
+
+  rpc MoveStop(MoveStopRequest) returns (MoveStopResponse) {
+  }
+
+  rpc UpdateName(UpdateNameRequest) returns (UpdateNameResponse) {
+  }
+
+  rpc Leave(LeaveRequest) returns (LeaveResponse) {
+  }
+
+  rpc WatchEvents(stream WatchRequest) returns (stream Events) {
+  }
+
+  rpc LearnSkill(LearnSkillRequest) returns (LearnSkillResponse) {
+  }
+
+  rpc ActiveSkill(ActiveSkillRequest) returns (ActiveSkillResponse) {
+  }
+
+  rpc PickUpItem(PickUpItemRequest) returns (PickUpItemResponse) {
+  }
+
+  rpc PmGenMonster(PMRequest) returns (PMResponse) {
+  }
+
+  rpc FlyPosition(FlyPositionRequest) returns (FlyPositionResponse) {
+  }
+
+  rpc FlyRebornPosition(FlyRebornPosRequest) returns (FlyRebornPosResponse) {
+  }
+
+  rpc SyncProps(SyncPropsRequest) returns(SyncPropsResponse){
+  }
+  rpc ChangeProps(SyncPropsRequest) returns(SyncPropsResponse){
+  }
+  rpc MoveToTarget(MoveToTargetRequest) returns(MoveToTargetResponse){
+  }
+
+  rpc ModPKList(PKRequest) returns(PKResponse){
+  }
+}
+

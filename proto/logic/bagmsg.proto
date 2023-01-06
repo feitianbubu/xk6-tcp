@@ -1,0 +1,155 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+
+//////////////////////Bag Start///////////////////////////
+// 背包功能-message
+
+// 背包功能-物品信息
+message BagItem {
+  // 物品ID
+  uint64 item_id = 1;
+  // 物品类型
+  uint32 item_type = 2;
+  // 物品数量
+  uint32 item_num = 3;
+  // 装备槽位
+  uint32 equip_pos = 4;
+}
+
+// 背包功能-效果
+message BagUseEffect {
+  // 效果类型（item,hero,skin...）
+  uint32 effect_type =1;
+  // 效果ID
+  uint32 effect_id = 2;
+  // 效果数量
+  uint32 effect_num = 3;
+}
+
+// 背包功能-出售奖励
+message BagSellAward {
+  // 出售奖励类型（item,hero,skin...）
+  uint32 award_type =1;
+  // 出售奖励ID
+  uint32 award_id = 2;
+  // 出售奖励数量
+  uint32 award_num = 3;
+}
+
+// 背包功能-全量请求
+message GetBagRequest {
+}
+
+// 背包功能-全量请求响应
+message GetBagResponse {
+  // 背包内所有物品信息
+  repeated BagItem bag_items = 1;
+  repeated uint32 bag_sizes = 2;
+}
+
+// PM-背包功能-增加物品请求
+message GainItemRequest {
+  // 物品类型
+  uint32 item_type = 1;
+  // 物品数量
+  uint32 item_num = 2;
+}
+
+// PM-背包功能-增加物品响应
+message GainItemResponse {
+  // 成功添加物品的数量
+  uint32 itme_num = 1;
+}
+
+// PM-背包功能-消耗物品请求
+message ConsumeItemRequest {
+  // 物品类型
+  uint32 item_type = 1;
+  // 物品数量
+  uint32 item_num = 2;
+}
+
+// PM-背包功能-消耗物品响应
+message ConsumeItemResponse {
+}
+
+// 背包功能-使用物品请求
+message UseBagItemRequest {
+  // 物品ID
+  uint64 item_id = 1;
+  // 使用物品数量
+  uint32 item_num = 2;
+}
+
+// 背包功能-使用物品响应
+message UseBagItemResponse {
+  // 使用后物品信息
+  BagItem bag_item = 1;
+  // 使用物品获得效果
+  repeated BagUseEffect use_effect = 2;
+}
+
+message BagEvent {
+  enum EvtType{
+    EVT_TYPE_UNSPECIFIED = 0;
+    EVT_TYPE_ITEM_ADD = 1;  // 增加物品
+    EVT_TYPE_ITEM_UPDATE = 2; // 物品数量发生变化
+    EVT_TYPE_ITEM_DEL = 3;  // 删除物品
+  }
+  EvtType event_type = 1;
+  // 物品信息
+  repeated BagItem bag_items = 2;
+}
+
+// 背包功能-出售物品请求
+message SellBagItemRequest{
+  // 出售物品ID
+  uint64 sell_id = 1;
+  // 出售物品数量
+  uint32 sell_num = 2;
+}
+
+// 背包功能-出售物品响应
+message SellBagItemResponse{
+  // 出售后的物品信息
+  BagItem bag_item = 1;
+  // 出售后获得的奖励
+  repeated BagSellAward bag_sell_award = 2;
+}
+
+// 装备功能—装备装备请求
+message EquipRequest{
+  enum ReqType{
+    REQ_TYPE_UNSPECIFIED = 0;
+    REQ_TYPE_EQUIP_EQUIP = 1;  // 装备装备
+    REQ_TYPE_EQUIP_REMOVE = 2; // 卸下装备
+  }
+  // 请求类型
+  ReqType req_type = 1;
+  // 装备物品ID
+  uint64 equip_id = 2;
+}
+
+// 装备功能—装备装备响应
+message EquipResponse{
+  // 装备好的物品信息
+  BagItem bag_item = 1;
+}
+
+// 装备功能—装备切换请求
+message EquipSwitchRequest{
+  // 装备物品ID
+  uint64 equip_id = 1;
+}
+
+// 装备功能—装备切换响应
+message EquipSwitchResponse{
+  // 装备好的物品信息
+  BagItem pre_equipment = 1;
+  BagItem now_equipment = 2;
+}
+
+//////////////////////Bag End///////////////////////////

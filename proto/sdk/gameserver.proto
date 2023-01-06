@@ -1,0 +1,138 @@
+// 使用 proto3 语法
+syntax = "proto3";
+// proto 包名
+package api.gameserver.v1;
+
+// 如果需要自动生成参数校验代码则需要导入 validate 定义（可选）
+import "google/protobuf/empty.proto";
+
+// 生成的 Go 语言代码目录和包名
+option go_package = "git.nd.com.cn/gameaccount/gameaccount-grpc/api/gameserver/v1;gsv1";
+
+// 定义 GameServer 服务
+service GameServer {
+  // token认证
+  rpc AuthToken (AuthTokenRequest) returns (AuthTokenReply) {};
+  // 游服注册
+  rpc Register (RegisterRequest) returns (google.protobuf.Empty) {};
+  // 游服反向注册
+  rpc UnRegister (UnRegisterRequest) returns (google.protobuf.Empty) {};
+  // 游服心跳
+  rpc ServerHeartbeat (ServerHeartbeatRequest) returns (google.protobuf.Empty) {};
+  // 设置游服相关信息
+  rpc ServerInfo (ServerInfoRequest) returns (google.protobuf.Empty) {};
+  // 玩家活动
+  rpc UserAction (UserActionRequest) returns (google.protobuf.Empty) {};
+  // 服务端流式grpc, 帐服通知游服 充值通知，踢人等业务
+  rpc AccountToGame(AccToGameRequest) returns (stream StreamMsg){};
+}
+message UserActionRequest{
+  uint32 ucType = 1; // 0-玩家上线；1-玩家离线；9-玩家心跳
+  uint32 ServerID = 2; // 游服ID
+  uint64 Uid = 3; // 玩家帐服账号ID
+  // 其他消息待定
+}
+message ServerHeartbeatRequest{
+  uint32 serverID = 1; // 游服ID
+  uint32 online = 2; // 在线人数
+}
+message RegisterRequest{
+  uint32 serverID = 1; // 游服ID
+  string serverName = 2; // 游服名称
+  string host = 3; // 游服地址，不需要就不传
+  uint32 port = 4; // 游服端口，不需要就不传
+  string customInfo = 5; // 自定义需要透传给客户端的信息
+  uint32 maxOnline = 6; // 最大在线人数
+  uint32 speed = 7; // 每秒登录速度
+  uint32 maxReg = 8; // 最大注册人数
+}
+message UnRegisterRequest{
+  uint32 serverID = 1; // 游服ID
+}
+message ServerInfoRequest{
+  uint32 serverID = 1;  // 游服ID
+  string host = 2; // 游服地址，默认空值不更新
+  uint32 port = 3; // 游服端口，默认0值不更新
+  string customInfo = 4; // 自定义需要透传给客户端的信息，默认空值不更新
+  uint32 maxOnline = 5; // 最大在线人数，默认0值不更新
+  uint32 speed = 6; // 每秒登录速度，默认0值不更新
+  uint32 maxReg = 7; // 最大注册人数，默认0值不更新
+}
+
+// 定义请求结构
+message AuthTokenRequest {
+  uint64 uid = 1; // 帐服账号id
+  string token = 2; // token
+  uint32 serverID = 3; // 游服id
+}
+
+// 定义响应结构
+message AuthTokenReply {
+  uint64 uid = 1;         // 帐服账号id
+  string token = 2;       // token
+  uint32 serverID = 3;    // 游服ID
+  uint32 platformID = 4;  // sdk平台id
+  string openID = 5;      // sdk平台openid
+  uint32 systemType = 6;  // 预留
+}
+message AccToGameRequest{
+  uint32 serverID = 1; // 游服ID，看是否需要，如果传0，那么所有账服发送游服的消息都走一条线路；
+}
+message StreamMsg{
+  MsgType msgID = 1; // 消息id
+  bytes data = 2; // 消息字节
+}
+enum MsgType {
+  MsgID_MsgHeartBeat = 0;  // 心跳
+  MsgID_MsgGSKick = 1;     // 游服互踢，看是否需要，有可能没有
+  MsgID_MsgKickNotify = 2; // 踢人通知
+  MsgID_MsgPayNotify = 3;  // 充值通知,
+  MsgID_MsgCqGmUser = 4; // 透明转发给游服，结构待定
+}
+// 对应消息 MsgID_MsgHeartBeat
+message MsgHeartBeat{
+  uint32 nodeID = 1;
+}
+// 对应消息 MsgID_MsgGSKick
+message MsgGSKick{
+  uint32 serverID = 1; // 被踢游服ID
+  string WhoIP = 2;     // 被谁踢节点的IP
+  string WhoPort = 3;   // 被谁踢节点的端口
+  string MyIP = 4;      // 我自己的IP
+  string MyPort = 5;    // 我自己的端口
+}
+// 对应消息 MsgID_MsgKickNotify
+message MsgKickNotify{
+  uint32 serverID = 1; // 0-全服踢，非0指定服踢
+  uint64 uid = 2; // 被踢账服账号ID
+  uint32 code = 3; // 踢人编码
+}
+
+// 对应消息 MsgID_MsgPayNotify
+message MsgPayNotify{
+  int32 actionID = 1 ; // 通知类型
+  string userName = 2 ; // 99通信证
+  string orderID = 3 ; // 订单编号
+  string data = 4 ; // 通知消息
+  string remark = 5 ; // 游戏gameType
+  uint32 serverID = 6; // 服务器ID，新增字段
+  uint32 int1 = 7; // 新增预留
+  string data1 = 8; // 新增预留
+}
+
+// 对应消息 MsgID_MsgCqGmUser
+message MsgCqGmUserTransfer{
+  uint32 serverID = 1;
+  uint32 accountID = 2;
+  uint64 userID = 3;
+  uint32 operateType = 4;
+  uint32 validTime = 5;
+  uint32 reasonID = 6;
+  string reason = 7;
+  uint32 tips = 8;
+  uint32 flag = 9;
+  uint32 int1 = 10; // 预留
+  uint32 int2 = 11; // 预留
+  string str1 = 12; // 预留
+  string str2 = 13; // 预留
+}

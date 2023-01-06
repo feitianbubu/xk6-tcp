@@ -1,0 +1,160 @@
+{
+  "login": {
+    "method": "/tevat.example.auth.Auth/Login",
+    "msg": {
+      "account_id": "1",
+      "account_token": "1"
+    }
+  },
+  "changePwd": {
+    "method": "/tevat.example.auth.Auth/ChangePwd",
+    "msg": {
+      "account_id": "1",
+      "old_pwd": "1",
+      "new_pwd": "1"
+    }
+  },
+  "resetPwd": {
+    "method": "/tevat.example.auth.Auth/ResetPwd",
+    "msg": {
+      "account_id": "1"
+    }
+  },
+  "enter": {
+    "method": "/tevat.example.logic.Logic/Enter"
+  },
+  "enterScene": {
+    "method": "/tevat.example.logic.Logic/EnterScene"
+  },
+  "info": {
+    "method": "/tevat.example.logic.Logic/Info"
+  },
+  "getBag": {
+    "method": "/tevat.example.logic.Logic/GetBag"
+  },
+  "loginLP": {
+    "method": "/api/v1/login",
+    "msg": {
+      "userAddress": "0x279A4C36098c4e76182706511AB0346518ad6049",
+      "content": "1659516267",
+      "signature": "0xd5f2199e375be586e78e454595047edfe6688989a674eca1dc847658aa387e041ceed79ca17be21bd6c6541822ea87e1bf1f3a73cbdf3c0d76bc176a523584b600"
+    }
+  },
+  "config": {
+    "method": "/api/v1/config"
+  },
+  "logicWatchEvents": {
+    "method": "/tevat.example.logic.Logic/WatchEvents"
+  },
+  "event": {
+    "method": "/tevat.example.scene.Scene/WatchEvents"
+  },
+  "move": {
+    "method": "/tevat.example.scene.Scene/Move",
+    "msg": {
+      "location": {
+        "x": 1111.86618,
+        "y": -1110.2960815,
+        "z": -111147.9435
+      },
+      "target_location": {
+        "x": 13.566,
+        "y": -0.296,
+        "z": 35.9199
+      }
+    }
+  },
+  "leave": {
+    "method": "/tevat.example.scene.Scene/Leave",
+    "msg": {
+      "uid": 1
+    }
+  },
+  "logout": {
+    "method": "/tevat.example.logic.Logic/Logout"
+  },
+  "rankUpdate": {
+    "method": "/tevat.example.rank.Rank/Update",
+    "msg": {
+      "rank_type": 0,
+      "period": 0,
+      "single_score": 0,
+      "total_score": 0
+    }
+  },
+  "battleRankUpdate": {
+    "method": "/tevat.example.rank.Rank/BattleUpdate",
+    "msg": {
+      "period": 0,
+      "battle_data": [
+        {
+          "userId": 74496,
+          "damage_score": 100,
+          "kill_score": 100
+        },
+        {
+          "userId": 74958,
+          "damage_score": 300,
+          "kill_score": 300
+        }
+      ]
+    }
+  },
+  "rankInfo": {
+    "method": "/tevat.example.rank.Rank/Info",
+    "msg": {
+      "rank_type": 0,
+      "period": 0,
+      "limit": 3,
+      "offset": 1
+    }
+  },
+  "userRankInfo": {
+    "method": "/tevat.example.rank.Rank/UserInfo",
+    "msg": {
+      "uid": 1
+    }
+  },
+  "navFind": {
+    "method": "/tevat.example.scene.Scene/FindPath",
+    "msg": {
+      "org": {
+        "x": 88.42,
+        "y": -5.226,
+        "z": -61.02
+      },
+      "dst": {
+        "x": 20,
+        "y": -0.296,
+        "z": -40.1
+      }
+    }
+  },
+  "unReg": {
+    "method": "/tevat.example.auth.Auth/UnRegister",
+    "msg": {
+      "serverID": 3000101,
+      "account_id": "612"
+    }
+  },
+  "serverInfo": {
+    "method": "/tevat.example.auth.Auth/ServerInfo",
+    "msg": {
+      "serverID": 3000101,
+      "account_id": "612"
+    }
+  },
+  "userAction": {
+    "method": "/tevat.example.auth.Auth/UserAction",
+    "msg": {
+      "ServerID": 3000101,
+      "account_id": "612"
+    }
+  },
+  "airdrop": {
+    "method": "/tevat.example.auth.Auth/Airdrop",
+    "msg": {
+      "account_id": "1234"
+    }
+  }
+}

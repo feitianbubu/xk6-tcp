@@ -1,0 +1,188 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+import "tevat/api/annotations.proto";
+import "chat/chatmsg.proto";
+import "scene/scenemsg.proto";
+import "logic/skillmsg.proto";
+import "logic/bagmsg.proto";
+import "logic/trademsg.proto";
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+
+message Empty {
+}
+
+message ErrorInfo {
+  int32 reason = 1;
+  string message = 2;
+  map<string, string> metadata = 3;
+}
+
+message CreateRequest {
+  string name = 1;
+  uint32 face_id = 2;
+}
+
+message CreateResponse{
+}
+
+message BasicUser {
+  uint64 userId = 1;
+  string name = 2;
+  uint32 face_id = 3;
+  uint32 level = 4;
+}
+
+message BasicInfoResponse {
+  BasicUser user_info = 1;
+}
+
+message User {
+  uint64 userId = 1;
+  string name = 2;
+  uint32 face_id = 3;
+  uint32 level = 4;
+  uint32 experience = 5;
+  uint32 stage = 6;
+  uint32 energy = 7;
+  uint64 gold = 8;
+  uint64 white_gold = 9;
+  uint64 eternal_stone = 10;
+  uint32 hp = 11;
+  uint32 max_hp = 12;
+  int32 atk = 13;
+  int32 def = 14;
+  double speed = 15;
+  uint32 occupation = 16;
+}
+
+// 用户货币变化
+message MoneyEvent{
+  uint32 money_type = 1;
+  uint64 count =2;
+}
+
+// 获得金币
+message GainGoldRequest {
+  uint64 UID=1[(tevat.api.shard_key) = true];
+  uint64 item_num = 2;
+}
+
+// 获得金币
+message GainGoldResponse {
+}
+
+//签到功能-客户端向服务端发签到请求
+message SignInRequest {
+}
+
+//签到功能-服务端发送签到响应
+message SignInResponse {
+  uint32 signed_num = 1;
+  uint32 last_signed=2;
+  string awards= 3;
+}
+
+//签到功能-服务端发送签到信息
+message SignInfo {
+  uint32 signed_num = 1;
+  uint32 last_signed=2;
+}
+
+
+message OnLogin {
+}
+
+message EnterRequest{
+
+}
+
+message EnterResponse{
+  User user_info = 1;
+  string  version=2;
+}
+
+message RenameRequest{
+  string name = 1;
+}
+
+message RenameResponse{
+  string name = 1;
+}
+
+message RefaceRequest{
+  uint32 face_id = 1;
+}
+
+message RefaceResponse{
+  uint32 face_id = 1;
+}
+
+
+message HeartbeatRequest{
+  int64 timestamp = 1;
+}
+
+message HeartbeatResponse{
+  int64 timestamp = 1;
+}
+
+message InfoRequest{
+  uint64 user_id = 1 [(tevat.api.shard_key) = true];
+}
+
+//watch通知
+message WatchResult {
+}
+
+message Events {
+  oneof Event {
+    OnLogin login = 1[(tevat.api.method) = "1"];
+    SignInfo sign_info=2[(tevat.api.method) = "2"];
+    tevat.example.scene.ObjectsAddNotify objects_add_notify = 3[(tevat.api.method) = "100"];
+    tevat.example.scene.PlayerAddNotify addPlayer = 4[(tevat.api.method) = "101"];
+    tevat.example.scene.MoveNotify moveNotify = 5[(tevat.api.method) = "102"];
+    tevat.example.scene.MoveStopNotify moveStopNotify = 6[(tevat.api.method) = "103"];
+    tevat.example.scene.LeaveNotify leaveNotify = 7[(tevat.api.method) = "104"];
+    tevat.example.scene.MonstersMove monsterMove = 8[(tevat.api.method) = "105"];
+    tevat.example.scene.DamageNotify damageNotify = 9[(tevat.api.method) = "106"];
+    tevat.example.scene.ActiveSkillNotify activeSkillNotify = 10[(tevat.api.method) = "107"];
+    tevat.example.scene.PlayerUpdateNotify updatePlayer =11[(tevat.api.method) = "108"];
+    tevat.example.scene.StateNotify stateNotify =12[(tevat.api.method) = "109"];
+    BagEvent bag_event = 13[(tevat.api.method) = "3"];
+    MoneyEvent money_event = 14[(tevat.api.method) = "4"];
+    tevat.example.scene.ItemDropNotify itemDropNotify = 15[(tevat.api.method) = "110"];
+    tevat.example.scene.DestroyDropItemNotify destroyDropItemNotify = 16[(tevat.api.method) = "111"];
+    TradeEvent trade_event = 17[(tevat.api.method) = "5"];
+    SkillsNotify skillsNotify=18[(tevat.api.method) = "112"];
+    tevat.example.scene.AwardMoneyNotify awardGoldNotify = 19[(tevat.api.method) = "113"];
+    WatchResult watch_result=20[(tevat.api.method) = "6"];
+    tevat.example.scene.GenMonsterNotify gen_monster_notify = 21[(tevat.api.method) = "114"];
+    PropsEvent props_event= 23[(tevat.api.method) = "7"];
+    tevat.example.chat.ChatNotify chat_notify = 24[(tevat.api.method) = "8"];
+    tevat.example.scene.PKNotify pk_notify = 25[(tevat.api.method) = "115"];
+    tevat.example.scene.ClientNotify client_notify= 26[(tevat.api.method) = "116"];
+  }
+}
+
+message SyncPropsRequest{
+  uint64 userId = 1 [(tevat.api.shard_key) = true];
+  repeated tevat.example.scene.Props props=2;
+}
+message SyncPropsResponse{
+}
+
+message PropsEvent{
+  repeated tevat.example.scene.Props props = 1;
+}
+
+message SubscribeChannelRequest {
+  uint32 channel_type = 1;
+  uint64 channel_key = 2;
+}
+
+message SubscribeChannelResponse {
+
+}

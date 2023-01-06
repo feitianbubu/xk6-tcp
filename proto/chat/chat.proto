@@ -1,0 +1,86 @@
+syntax = "proto3";
+package tevat.example.chat;
+
+import "chat/chatmsg.proto";
+import "chat/channelmsg.proto";
+import "tevat/api/annotations.proto";
+
+option go_package = "tevat/example/pkg/proto/chat";
+
+service Chat {
+  // 设置服务默认代理规则
+  option(tevat.api.proxy_default) = {
+    // 默认禁用proxy转发，客户端不能调用对应接口
+    proxy: DISABLED,
+    // 接口超时时间为3秒
+    timeout: "3s",
+    // 对客户端协议为PROTOBUF
+    proto: PROTOBUF,
+    // 方法在有别名的情况下不保留原名支持
+    keep_origin: false,
+  };
+
+  // 设置分片相关信息
+  option(tevat.api.shard) = {
+    // 按聊天频道类型分片 channel_type
+    shard_key_type: UINT32,
+    // 分片信息会存放在消息中
+    shard_key_location: MESSAGE,
+    // 默认使用消息中的 channel_type
+    default_shard_field: "channel_type",
+  };
+
+  // 获取聊天频道历史消息请求
+  rpc ListMessage(ListMessageRequest) returns (ListMessageResponse) {
+    option(tevat.api.proxy) = {
+      // 提供客户端调用
+      proxy: ENABLED,
+    };
+  }
+
+  // 发送聊天消息请求
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {
+    option(tevat.api.proxy) = {
+      // 提供客户端调用
+      proxy: ENABLED,
+    };
+  }
+
+  // 以下为服务端内部接口，转发对客户端关闭
+  // 加入频道
+  rpc JoinChannel(ChannelKey) returns (JoinChannelResponse) {
+    option(tevat.api.proxy) = {
+      watch: {
+        method: "WatchEvents",
+        event_key_field: "channel_type",
+      }
+    };
+  }
+
+  //离开频道
+  rpc LeaveChannel(ChannelKey) returns (LeaveChannelResponse) {
+  }
+
+  // 创建聊天频道
+  rpc CreateSubChannel(CreateSubChannelRequest) returns (CreateSubChannelResponse) {
+  }
+
+  // 销毁聊天频道
+  rpc DropSubChannel(DropSubChannelRequest) returns (DropSubChannelResponse) {
+  }
+
+  // 批量添加聊天频道成员
+  rpc AddMembers(AddMembersRequest) returns (AddMembersResponse) {
+  }
+
+  // 批量移除聊天频道成员
+  rpc RemoveMembers(RemoveMembersRequest) returns (RemoveMembersResponse) {
+  }
+
+  rpc WatchEvents(stream WatchRequest) returns (stream Events) {
+  }
+
+  rpc SyncBasicProps(SyncBasicPropsRequest) returns (SyncBasicPropsResponse) {
+
+  }
+}

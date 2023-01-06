@@ -1,0 +1,67 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+
+//////////////////////Shop Start///////////////////////////
+// 商店功能-message
+
+// 商店功能-物品信息
+message ShopItemInfo {
+  // 物品类型
+  uint32 item_type = 1;
+  // 物品ID
+  uint32 item_id = 2;
+  // 物品数量
+  uint32 item_num = 3;
+}
+
+// 商店功能-商店信息
+message Shop{
+  uint32 shop_id = 1;
+  bool status = 2;
+  uint32 update = 3;
+  uint32 level_limit = 4;
+  int64 open_time = 5;
+  int64 close_time = 6;
+}
+
+// 商店全量请求
+message ShopsRequest{
+}
+
+message ShopsResponse{
+  repeated Shop shops = 1;
+}
+
+// 商品信息
+message ShopItem{
+  uint32 item_id = 1;
+  uint32 shop_id = 2;
+  bool status = 3;
+  uint32 update = 4;
+  uint32 stock = 5;
+  int64 open_time = 6;
+  int64 close_time = 7;
+}
+// 单个商店内商品全量请求
+message ShopItemsRequest{
+  uint32 shop_id = 1;
+}
+message ShopItemsResponse{
+  repeated ShopItem shop_items = 1;
+}
+
+// 购买商品请求
+message BuyItemsRequest{
+  uint32 item_id = 1;
+  uint32 count = 2;
+  uint32 currency_type = 3;
+}
+
+message BuyItemsResponse{
+  ShopItem shop_items = 1;
+  repeated ShopItemInfo shopItemInfo = 2;
+}
+//////////////////////Shop End///////////////////////////

@@ -1,0 +1,35 @@
+syntax = "proto3";
+package tevat.example.nav;
+
+import "tevat/api/annotations.proto";
+import "nav/navmsg.proto";
+
+option go_package = "tevat/example/pkg/proto/nav";
+
+
+service Nav {
+  option(tevat.api.proxy_default) = {
+    // 启用proxy转发，客户端可以调用对应接口
+    proxy: ENABLED,
+    // 接口的超时时间为3秒
+    timeout: "3s",
+    // 对客户端协议为PROTOBUF
+    proto: PROTOBUF,
+    // 方法在有别名的情况下不保留原名支持
+    keep_origin: false,
+  };
+
+  // 设置分片相关信息
+  option(tevat.api.shard) = {
+    // 使用uid来分片，uid由auth服务设置，类型为uint64
+    shard_key_type: UINT64,
+    // uid由auth服务设置在session中
+    shard_key_location: SESSION,
+    // uid在session中的key为uid
+    default_shard_field: "uid",
+  };
+
+  rpc FindPath(FindRequest) returns (FindResponse) {
+  }
+
+}

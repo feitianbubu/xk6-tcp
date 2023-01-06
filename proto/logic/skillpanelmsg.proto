@@ -1,0 +1,55 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+//////////////////////////////////Active Start/////////////////////////////
+// 技能槽功能-message
+// 已装备的技能信息
+message PanelInfo {
+    uint32 skill1 = 1;// 技能槽1放的技能id
+    uint32 skill2 = 2;// 技能槽2放的技能id
+    uint32 skill3 = 3;// 技能槽3放的技能id
+    uint32 skill4 = 4;// 技能槽4放的技能id
+    uint32 skill5 = 5;// 技能槽5放的技能id
+  }
+
+  // 技能槽信息
+  message SkillPanel{
+    uint32 skill_slot = 1;// 技能槽位
+    uint32 skill_id = 2;// 技能id
+  }
+
+  //技能槽全量请求
+  message SkillPanelRequest{
+  }
+
+  //技能槽全量响应
+  message SkillPanelResponse{
+    PanelInfo panel_Info=1;
+  }
+
+
+  // 技能装备请求
+  message SkillEquipResquest{
+    SkillPanel skill_panel = 1;// 待装备的角色技能
+  }
+
+  // 技能装备响应
+  message SkillEquipResponse{
+    uint32 skill_id = 1;// 被卸下的技能id
+    SkillPanel panel_info = 2;// 角色技能
+  }
+
+  // 技能交换请求
+  message SkillSwitchResquest{
+    uint32 skill_slot_origin = 1;// 待切换的原槽位
+    uint32 skill_slot_target = 2;// 待切换的目标槽位
+  }
+
+  // 技能交换响应
+  message SkillSwitchResponse{
+    repeated SkillPanel skillpanels = 1;// 交换的角色技能
+  }
+
+  //////////////////////////////////Active Start/////////////////////////////

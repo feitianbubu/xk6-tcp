@@ -1,0 +1,349 @@
+syntax = "proto3";
+package tevat.example.scene;
+
+import "nav/navmsg.proto";
+import "tevat/api/annotations.proto";
+
+option go_package = "tevat/example/pkg/proto/scene";
+
+message Empty {
+}
+
+message WatchRequest {
+  string scene_id = 1 [(tevat.api.shard_key) = true];
+}
+
+message InfoResponse {
+}
+
+message EnterCellRequest {
+  string scene_id = 1;
+  uint32 profession=2;
+  uint32 hp =3;
+  uint32 max_hp =4;
+  int32 atk =5;
+  int32 def =6;
+  uint32 mana=7;
+  string Name=8;
+  double Speed=9;
+  Location location = 10;
+}
+
+message EnterCellResponse {
+
+}
+
+message MoveRequest {
+  Location location = 1;
+  Location target_location = 2;
+}
+
+message MoveResponse {
+}
+
+message MoveNotify{
+  uint64 uid = 1;
+  Location location = 2;
+  Location targetLocation = 3;
+}
+
+message MoveStopRequest {
+  Location location = 1;
+}
+
+message MoveStopResponse {
+}
+
+message MoveStopNotify {
+  uint64 uid = 1;
+  Location location = 2;
+}
+
+message LeaveRequest {
+  string scene_id = 1;
+}
+
+message LeaveResponse {
+  PlayerInfo playerInfo = 1;
+}
+
+message LeaveNotify{
+  uint64 uid = 1;
+}
+
+message Location{
+  float x = 1;
+  float y = 2;
+  float z =3;
+}
+
+message PlayerInfo{
+  uint64 uid = 1;
+  string name=2;
+  uint32 profession=3;
+  uint32 hp =4;
+  uint32 mana=5;
+  int32 atk =6;
+  int32 def =7;
+  float speed=8;
+  Location location = 9;
+  uint32 camp=10;
+  uint32 max_hp =11;
+}
+
+message PlayerAddNotify{
+  uint32 mapId=1;
+  PlayerInfo playerInfo=2;
+}
+
+message PlayerUpdateNotify{
+  PlayerInfo playerInfo=1;
+}
+
+message ObjectsAddNotify{
+  repeated  PlayerInfo player=1;
+  repeated  MonsterInfo monster=2;
+  repeated  DropItemInfo dropItem=3;
+}
+
+message MonsterInfo{
+  uint64 id = 1;
+  uint32 monsterType=2;
+  uint32 hp =3;
+  int32 atk =4;
+  int32 def =5;
+  float speed=6;
+  Location location = 7;
+  Path path=8;
+  uint32 camp=9;
+}
+
+message MonstersAddNotify{
+  repeated  MonsterInfo monster=1;
+}
+
+message Path{
+  int32 totalTime=2;
+  repeated  Location position=3;
+}
+
+message MonstersMove{
+  uint64 id = 1;
+  Path path=2;
+}
+
+message AwardMoneyNotify{
+  uint64 UserId = 1;
+  int32 gold=2;
+}
+
+message Events {
+  oneof Event {
+    tevat.example.scene.ObjectsAddNotify objects_add_notify = 3[(tevat.api.method) = "100"];
+    tevat.example.scene.PlayerAddNotify addPlayer = 4[(tevat.api.method) = "101"];
+    tevat.example.scene.MoveNotify moveNotify = 5[(tevat.api.method) = "102"];
+    tevat.example.scene.MoveStopNotify moveStopNotify = 6[(tevat.api.method) = "103"];
+    tevat.example.scene.LeaveNotify leaveNotify = 7[(tevat.api.method) = "104"];
+    tevat.example.scene.MonstersMove monsterMove = 8[(tevat.api.method) = "105"];
+    tevat.example.scene.DamageNotify damageNotify = 9[(tevat.api.method) = "106"];
+    tevat.example.scene.ActiveSkillNotify activeSkillNotify = 10[(tevat.api.method) = "107"];
+    tevat.example.scene.PlayerUpdateNotify updatePlayer =11[(tevat.api.method) = "108"];
+    tevat.example.scene.StateNotify stateNotify =12[(tevat.api.method) = "109"];
+    tevat.example.scene.ItemDropNotify itemDropNotify = 15[(tevat.api.method) = "110"];
+    tevat.example.scene.DestroyDropItemNotify destroyDropItemNotify = 16[(tevat.api.method) = "111"];
+    tevat.example.scene.AwardMoneyNotify awardGoldNotify = 19[(tevat.api.method) = "113"];
+    tevat.example.scene.GenMonsterNotify gen_monster_notify = 21[(tevat.api.method) = "114"];
+    tevat.example.scene.PKNotify pk_notify = 25[(tevat.api.method) = "115"];
+    tevat.example.scene.ClientNotify client_notify= 26[(tevat.api.method) = "116"];
+  }
+}
+
+enum NOTIFY_MSG_TYPE{//客户端消息通知类型
+  SCROLL = 0; // 走马灯
+  COUNTDOWN = 1; //倒计时
+}
+enum NOTIFY_MSG_STATUS{//客户端消息通知状态
+  ActStatusInit = 0; //初始化
+  ActStatusReady = 1;  // 准备开始
+  ActStatusWillStart = 2; // 开始倒计时
+  ActStatusStarted = 3;   // 已开始
+  ActStatusFinishing = 4; // 结束走马灯
+  ActStatusFinished = 5;  // 活动已结束
+}
+message ClientNotify {// 走马灯通知
+  NOTIFY_MSG_TYPE type = 1;
+  string msg = 2; //显示文本
+  int64 duration_sec = 3; // 持续时长(秒)
+  int64 remain_sec = 4; // 剩余时长(秒)
+  NOTIFY_MSG_STATUS status = 5;
+  string remote = 6;
+}
+
+message FindPathRequest {
+  tevat.example.nav.Vec3 org=1;
+  tevat.example.nav.Vec3 dst=2;
+}
+
+message FindPathResponse {
+  repeated tevat.example.nav.Vec3 path=1;
+}
+
+// 掉落道具信息
+message DropItemInfo{
+  uint64 id = 1;
+  uint32 type =2;
+  uint32 num = 3;
+  // 掉落时间
+  int32 dropTime = 4;
+  // 存留时间
+  int32 keepTime = 5;
+  Location location = 6;
+  uint64 ownerID =7;
+}
+
+
+// 掉落道具通知
+message ItemDropNotify{
+  repeated  DropItemInfo dropItemInfo=1;
+  string remote = 2;
+}
+
+// 掉落道具消失通知
+message DestroyDropItemNotify{
+  uint64 dropItemID = 1;
+  uint64 pickupUID = 2;
+  string remote = 3;
+}
+
+message LearnSkillRequest {
+}
+
+message LearnSkillResponse {
+}
+
+message ActiveSkillRequest {
+  uint32 skillId = 1;
+  uint64 targetId = 2;
+  Location dir = 3;
+}
+
+message ActiveSkillResponse {
+}
+
+message DamageParam{
+  uint64 attackerId = 1;
+  uint64 victimId = 2;
+  uint32 value = 3;
+}
+
+message DamageNotify{
+  repeated DamageParam params = 1;
+}
+
+message ActiveSkillParam{
+  uint64 attackerId = 1;
+  uint64 victimId = 2;
+  uint32 skillId = 3;
+  Location dir = 4;
+}
+
+message ActiveSkillNotify{
+  repeated ActiveSkillParam params = 1;
+}
+
+enum ActionType{
+  action_none	= 0;
+  action_del	= 1;
+  action_add   = 2;
+  action_syn   = 3;
+}
+
+message StateContent{
+  uint64     UserID = 1;
+  ActionType action = 2;
+  uint32     idState   = 3;
+  uint64     idCreate  = 4;
+}
+
+message StateNotify{
+  repeated  StateContent contents = 1;
+}
+
+message GenMonsterNotify{
+  uint32     Timer = 1;
+  uint32     Wave = 2;
+}
+
+message PMRequest{
+}
+
+message PMResponse{
+}
+
+message PickUpItemRequest{
+  uint64     ID = 1;
+}
+
+message PickUpItemResponse{
+  uint32 pickup_num = 1;
+}
+
+message FlyPositionRequest{
+  Location location = 1;
+}
+
+message FlyPositionResponse{
+  Location location = 1;
+}
+
+message FlyRebornPosRequest{
+}
+
+message FlyRebornPosResponse{
+}
+
+message Props{
+  oneof Prop{
+    int32 hp = 1;
+    int32 mana = 2;
+    int32 atk = 3;
+    int32 def = 4;
+    int32 max_mana = 5;
+    int32 max_hp = 6;
+    float speed = 7;
+  }
+}
+message SyncPropsRequest{
+  repeated Props props = 1;
+}
+message SyncPropsResponse{
+  repeated Props change_props = 1;
+  repeated Props props = 2;
+}
+
+message MoveToTargetRequest{
+  Location location = 1;
+}
+
+message MoveToTargetResponse{
+  repeated Location location = 1;
+}
+
+message UpdateNameRequest{
+  string name = 1;
+}
+
+message UpdateNameResponse{
+}
+message PKRequest{
+  uint64 target_id = 1;
+  ActionType action = 2;
+}
+
+message PKResponse{}
+
+message PKNotify{
+  repeated uint64 IDs = 1;
+  ActionType action = 2;
+  string remote = 3;
+}

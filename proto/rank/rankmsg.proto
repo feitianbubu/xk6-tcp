@@ -1,0 +1,65 @@
+syntax = "proto3";
+package tevat.example.rank;
+
+option go_package = "tevat/example/pkg/proto/rank";
+
+enum RankType{
+  RankType_damage = 0; //伤害排行
+  RankType_Kill = 1; //杀怪排行
+  RankType_PK = 2; //PK伤害排行
+}
+
+// 更新排行榜分数
+message UpdateRequest {
+  RankType rank_type = 1; // 排行榜
+  int64 period =2; // 期数
+  uint64 userId = 3;
+  uint32 single_score = 4; // 单次值
+  uint32 total_score= 5;  // 累计值
+}
+// 战斗更新分数,定制统计伤害和杀怪数据
+message BattleData {
+  uint64 userId = 1;
+  uint32 damage_score = 2; // 伤害值
+  uint32 kill_score=3; // 杀怪值
+  uint32 pk_score=4; // pk伤害
+}
+message BattleUpdateRequest {
+  int64 period =1; // 期数(可选)
+  repeated BattleData battle_data =2;
+}
+
+message UpdateResponse {
+}
+
+// 排行榜请求
+message InfoRequest {
+  RankType rank_type = 1;
+  int64 period =2;
+  int64 limit =3;
+  int64 offset =4;
+}
+
+message RankDetail{
+  uint64 uid = 1; // uid
+  double score = 2; // 分数
+  string name = 3; // 名称
+  uint32 face_id = 4; // 头像id
+  int64 ranking = 5;// 名次
+}
+// 排行榜返回
+message InfoResponse {
+  repeated RankDetail rank_details =1;
+}
+
+// 玩家排名信息请求
+message UserInfoRequest{
+  uint64 uid = 1;// 玩家uid
+  RankType rank_type = 2;// 排行榜类型
+  int64 period =3;// 期数
+}
+
+// 玩家排名信息返回
+message UserInfoResponse{
+  RankDetail rank_detail =1;
+}

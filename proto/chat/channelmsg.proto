@@ -1,0 +1,99 @@
+syntax = "proto3";
+package tevat.example.chat;
+
+import "tevat/api/annotations.proto";
+
+option go_package = "tevat/example/pkg/proto/chat";
+
+// 聊天频道管理-玩家主动加入、离开频道
+message ChannelKey {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint64 channel_key = 2; // 聊天频道标识（如房间频道，该字段则为房间ID）
+}
+
+message JoinChannelResponse {
+
+}
+
+message LeaveChannelResponse {
+
+}
+
+// 聊天频道管理-创建聊天频道请求
+message CreateSubChannelRequest {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint64 channel_key = 2; // 聊天频道标识（如房间频道，该字段则为房间ID）
+  repeated uint64 member_ids = 3; // 聊天频道成员列表
+}
+
+// 聊天频道管理-创建聊天频道响应
+message CreateSubChannelResponse {
+
+}
+
+// 聊天频道管理-关闭聊天频道请求
+message DropSubChannelRequest {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint64 channel_key = 2; // 聊天频道标识（如房间频道，该字段则为房间ID；好友频道，该字段为玩家ID）
+}
+
+// 聊天频道管理-关闭聊天频道响应
+message DropSubChannelResponse {
+
+}
+
+// 聊天频道管理-批量添加聊天频道成员请求
+message AddMembersRequest {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint64 channel_key = 2; // 聊天频道标识（如房间频道，该字段则为房间ID）
+  repeated uint64 member_ids = 3; // 聊天频道成员ID列表
+}
+
+// 聊天频道管理-批量添加聊天频道成员响应
+message AddMembersResponse {
+
+}
+
+// 聊天频道管理-批量移除聊天频道成员请求
+message RemoveMembersRequest {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint32 channel_key = 2; // 聊天频道标识（如房间频道，该字段则为房间ID）
+  repeated uint64 member_ids = 3; // 聊天频道成员ID列表
+}
+
+// 聊天频道管理-批量移除聊天频道成员响应
+message RemoveMembersResponse {
+
+}
+
+message WatchRequest {
+  enum WatchAction {
+    WATCH_ACTION_UNSPECIFIED = 0;
+    WATCH_ACTION_JOIN = 1; // 加入频道
+    WATCH_ACTION_LEAVE = 2; // 离开频道
+  }
+  uint64 user_id = 1; // 角色ID
+  WatchAction action = 2;
+  uint32 channel_type = 3;
+  uint64 channel_key = 4;
+  string remote = 5;
+}
+
+message Unwatch {
+  option (tevat.api.event_action) = {
+    forward: false,
+    action: UNWATCH,
+  };
+  string remote = 1;
+}
+
+message SyncBasicPropsRequest {
+  uint32 channel_type = 1;
+  uint64 channel_key = 2;
+  string name = 3;
+  uint32 face_id = 4;
+}
+
+message SyncBasicPropsResponse {
+
+}

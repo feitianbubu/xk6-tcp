@@ -1,0 +1,47 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+
+//////////////////////Compose Start///////////////////////////
+// 合成功能-message
+
+// 合成功能-物品信息
+message ComposeInfo {
+  // 物品类型
+  uint32 item_type = 1;
+  // 物品ID
+  uint32 item_id = 2;
+  // 物品数量
+  uint32 item_num = 3;
+}
+
+// 合成物信息
+message Compose{
+  uint32 item_id = 1;
+  bool status = 2;
+  uint32 stock = 3;
+  int64 open_time = 4;
+  int64 close_time = 5;
+}
+
+// 合成物全量请求
+message ComposesRequest{
+}
+message ComposesResponse{
+  repeated Compose composes = 1;
+}
+
+// 合成物品请求
+message ComposeRequest{
+  uint32 compose_id = 1;
+  uint32 count = 2;
+}
+
+message ComposeResponse{
+  Compose compose = 1;
+  repeated ComposeInfo composeInfo = 2;
+}
+
+//////////////////////Compose End///////////////////////////

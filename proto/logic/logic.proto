@@ -1,0 +1,223 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+import "logic/logicmsg.proto";
+import "logic/bagmsg.proto";
+import "logic/shopmsg.proto";
+import "logic/trademsg.proto";
+import "logic/skillpanelmsg.proto";
+import "logic/skillmsg.proto";
+import "tevat/api/annotations.proto";
+import "logic/composemsg.proto";
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+
+service Logic {
+  option(tevat.api.proxy_default) = {
+    // 启用proxy转发，客户端可以调用对应接口
+    proxy: ENABLED,
+    // 接口的超时时间为3秒
+    timeout: "3s",
+    // 对客户端协议为PROTOBUF
+    proto: PROTOBUF,
+    // 方法在有别名的情况下不保留原名支持
+    keep_origin: false,
+  };
+
+  // 设置分片相关信息
+  option(tevat.api.shard) = {
+    // 使用uid来分片，uid由auth服务设置，类型为uint64
+    shard_key_type: UINT64,
+    // uid由auth服务设置在session中
+    shard_key_location: SESSION,
+    // uid在session中的key为uid
+    default_shard_field: "uid",
+  };
+
+  rpc Enter(EnterRequest) returns (EnterResponse) {
+    option(tevat.api.proxy) = {
+      timeout: "60m",
+      // 只有登录接口提供给客户端直接调用
+    };
+  }
+
+  rpc EnterScene(EnterRequest) returns (EnterResponse) {
+    option(tevat.api.proxy) = {
+      timeout: "60m",
+      // 只有登录接口提供给客户端直接调用
+    };
+  }
+
+  rpc NetMsgError(Empty) returns (ErrorInfo){
+  }
+
+  rpc Create(CreateRequest) returns (CreateResponse) {
+  }
+
+
+  rpc Rename(RenameRequest) returns (RenameResponse) {
+  }
+
+  rpc Reface(RefaceRequest) returns (RefaceResponse) {
+  }
+
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse) {
+  }
+
+  rpc Info(InfoRequest) returns (User) {
+  }
+
+  // （提供客户端使用）获取指定玩家基础信息.
+  rpc BasicInfo(InfoRequest) returns (BasicInfoResponse) {
+  }
+
+  rpc SyncProps(SyncPropsRequest) returns (SyncPropsResponse) {
+  }
+
+  //SignIn 签到
+  rpc SignIn(SignInRequest) returns (SignInResponse) {
+  }
+
+  rpc WatchEvents(Empty) returns (stream Events) {
+  }
+
+  rpc Logout(Empty) returns (Empty) {
+    option(tevat.api.proxy) = {
+      proxy: DISABLED,
+    };
+  }
+
+  // 增加金币
+  rpc GainGold(GainGoldRequest) returns (GainGoldResponse) {
+  }
+
+  // 背包功能-全量请求
+  rpc GetBag(GetBagRequest) returns (GetBagResponse) {
+  }
+
+  // 背包功能-使用物品
+  rpc UseItem(UseBagItemRequest) returns (UseBagItemResponse) {
+  }
+
+  // 背包功能-增加物品
+  rpc GainItemAndCheckLimit(GainItemRequest) returns (GainItemResponse) {
+  }
+  // 背包功能-增加物品
+  rpc ConsumeItem(ConsumeItemRequest) returns (ConsumeItemResponse) {
+  }
+  // 背包功能-出售物品
+  rpc SellItem(SellBagItemRequest) returns (SellBagItemResponse) {
+  }
+
+  // 装备功能-装备/卸下装备
+  rpc Equip(EquipRequest) returns (EquipResponse) {
+  }
+
+  // 装备功能-交换装备
+  rpc EquipSwitch(EquipSwitchRequest) returns (EquipSwitchResponse) {
+  }
+
+
+  // Shop 商城功能。
+  // 商城请求。
+  rpc Shops(ShopsRequest) returns (ShopsResponse){
+  }
+
+  // 商品请求。
+  rpc ShopItems(ShopItemsRequest) returns (ShopItemsResponse){
+  }
+
+  // 购买商品。
+  rpc BuyItems(BuyItemsRequest) returns (BuyItemsResponse){
+  }
+
+  // 技能槽功能开始
+  rpc PanelQuery(SkillPanelRequest) returns (SkillPanelResponse) {
+  }
+
+  rpc SkillEquip(SkillEquipResquest) returns (SkillEquipResponse) {
+  }
+
+  rpc SkillSwitch(SkillSwitchResquest) returns (SkillSwitchResponse) {
+  }
+  // 技能槽功能结束
+
+  // 技能功能开始
+  rpc SkillQuery(SkillQueryRequest) returns(SkillQueryResponse){
+  }
+  // 技能功能结束
+
+
+  // Trade 交易功能。
+  // 发起交易请求
+  rpc TradeInvite(TradeInviteRequest) returns (TradeInviteResponse) {
+  }
+
+  // 接受交易
+  rpc TradeAccept(TradeAcceptRequest) returns (TradeAcceptResponse) {
+  }
+
+  // 拒绝交易
+  rpc TradeDecline(TradeDeclineRequest) returns (TradeDeclineResponse) {
+  }
+
+  // 更新交易栏
+  rpc TradeUpdateItem(TradeUpdateItemRequest) returns (TradeUpdateItemResponse) {
+
+  }
+
+  // 锁定交易栏
+  rpc TradeLockItem(TradeLockItemRequest) returns (TradeLockItemResponse) {
+  }
+
+  // 取消锁定交易栏
+  rpc TradeCancelLockItem(TradeCancelLockItemRequest) returns (TradeCancelLockItemResponse) {
+  }
+
+  // 最终确认交易
+  rpc TradeConfirm(TradeConfirmRequest) returns (TradeConfirmResponse) {
+  }
+
+  // 终止交易
+  rpc TradeClose(TradeCloseRequest) returns (TradeCloseResponse) {
+  }
+
+  // 转发交易消息至其他玩家
+  rpc TradeNotifyEvent(TradeNotifyRequest) returns (Empty) {
+    option(tevat.api.proxy) = {
+      proxy: DISABLED,
+    };
+  }
+
+  // 查询交易目标状态.
+  rpc TradeUser(TradeUserInfoRequest) returns (TradeUserInfo) {
+    option(tevat.api.proxy) = {
+      proxy: DISABLED,
+    };
+  }
+
+  // 同步交易状态
+  rpc TradeSyncState(TradeSyncStateRequest) returns (TradeSyncStateResponse) {
+    option(tevat.api.proxy) = {
+      proxy: DISABLED,
+    };
+  }
+
+  // Compose功能
+  // 合成物全量请求
+  rpc Composes(ComposesRequest) returns (ComposesResponse){
+  }
+
+  // 合成请求
+  rpc Compose(ComposeRequest) returns (ComposeResponse){
+  }
+
+  // Chat功能
+  // 登录后订阅聊天频道
+  rpc SubscribeChannel(SubscribeChannelRequest) returns (SubscribeChannelResponse) {
+    option(tevat.api.proxy) = {
+      timeout: "60m",
+    };
+  }
+}

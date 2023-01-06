@@ -1,0 +1,67 @@
+syntax = "proto3";
+package tevat.example.auth;
+
+option go_package = "tevat/example/pkg/proto/auth";
+
+message Empty {
+}
+
+message LoginRequest {
+  // 帐号提供的账号唯一ID，用于hash取模之后用于分片
+  string account_id = 1;
+  // 账服返回的token，用于和账服确认登录用
+  string account_token = 2;
+}
+
+message Info {
+  // 帐号ID，用于寻找对应的goroutine
+  string account_id = 1;
+  // 用户ID，集群中用户的唯一ID
+  uint64  uid = 2;
+  // 认证服务器生成的token
+  string auth_token = 3;
+  // 是否首次登陆
+  bool first_login = 4;
+}
+
+message SyncRoleInfoRequest{
+  string account_id = 1;
+  string Name = 2;
+}
+
+message SyncRoleInfoResponse{
+}
+
+message ChangePwdRequest{
+  string account_id =1;
+  string old_pwd =2; // 原密码
+  string new_pwd=3;  // 新密码
+}
+message ChangePwdResponse{
+}
+
+message AirdropRequest{
+  string account_id = 99; // 兼容分片
+}
+
+message UnRegisterRequest{
+  uint32 serverID = 1; // 游服ID
+  string account_id = 99; // 兼容分片
+}
+message ServerInfoRequest{
+  uint32 serverID = 1;  // 游服ID
+  string host = 2; // 游服地址，默认空值不更新
+  uint32 port = 3; // 游服端口，默认0值不更新
+  string customInfo = 4; // 自定义需要透传给客户端的信息，默认空值不更新
+  uint32 maxOnline = 5; // 最大在线人数，默认0值不更新
+  uint32 speed = 6; // 每秒登录速度，默认0值不更新
+  uint32 maxReg = 7; // 最大注册人数，默认0值不更新
+  string account_id = 99; // 兼容分片
+}
+message UserActionRequest{
+  uint32 ucType = 1; // 0-玩家上线；1-玩家离线；9-玩家心跳
+  uint32 ServerID = 2; // 游服ID
+  uint64 Uid = 3; // 玩家帐服账号ID
+  string account_id = 99; // 兼容分片
+  // 其他消息待定
+}

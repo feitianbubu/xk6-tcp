@@ -1,0 +1,17 @@
+syntax = "proto3";
+package tevat.example.mask;
+
+option go_package = "tevat/example/pkg/proto/mask";
+
+message WordRequest {
+  bytes ori_word =1; // 原始的消息内容
+}
+
+message CheckWordResponse {
+  bool needMask =1;  // 是否含有敏感词
+}
+
+message ReplaceWordResponse {
+  bytes legal_word =1; // 屏蔽字处理后的消息内容
+}
+

@@ -1,0 +1,58 @@
+syntax = "proto3";
+package tevat.example.chat;
+
+import "tevat/api/annotations.proto";
+
+option go_package = "tevat/example/pkg/proto/chat";
+
+message ContentInfo {
+  uint64 message_id = 1; // 消息ID
+  uint64 user_id = 2; // 消息发送方角色ID
+  string user_name = 3; // 消息发送方角色名
+  uint32 face_id = 4; // 消息发送方头像ID
+  bytes content = 5; // 消息内容
+}
+
+// GlobalNotify 全局消息通知（通用结构）
+message GlobalNotify {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint64 channel_key = 2; // 聊天频道标识
+  ContentInfo content = 3; // 聊天消息详情
+}
+
+message ChatNotify {
+  oneof Event {
+    GlobalNotify globalNotify = 1;
+  }
+}
+
+// 聊天-获取聊天频道历史消息请求
+message ListMessageRequest {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint64 channel_key = 2; // 聊天频道标识
+  uint32 limit = 3; // 数量限制. 目前暂定最多下发20条消息（后续视情况调整为Notify）
+  uint64 last_id = 4; // 起始消息ID.若last_id为0，则按时间降序排序，返回最近${limit}条消息.
+}
+
+// 聊天-获取聊天频道历史消息响应
+message ListMessageResponse {
+  repeated ContentInfo contents = 1;
+}
+
+// 聊天-发送聊天消息请求
+message SendMessageRequest {
+  uint32 channel_type = 1; // 聊天频道类型
+  uint64 channel_key = 2; // 聊天频道标识（如房间频道，该字段则为房间ID；队伍频道，该字段为队伍ID；工会频道，该字段为工会ID；好友、私聊频道，则为发送目标ID）
+  bytes content = 3; // 聊天内容
+}
+
+// 聊天-发送聊天消息响应
+message SendMessageResponse {
+
+}
+
+message Events {
+  oneof Event {
+    ChatNotify chat_notify = 24[(tevat.api.method) = "8"];
+  }
+}

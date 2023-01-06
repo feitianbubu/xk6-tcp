@@ -1,0 +1,217 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+import "tevat/api/annotations.proto";
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+// 交易消息转发请求（对客户端关闭）
+message TradeNotifyRequest {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+  uint64 target_user = 3 [(tevat.api.shard_key) = true];
+  TradeEvent event = 4;
+}
+
+message TradeStorageMulti {
+  repeated TradeItem items = 1;
+}
+
+// 交易状态同步请求（对客户端关闭）
+message TradeSyncStateRequest {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+  uint64 target_user = 3 [(tevat.api.shard_key) = true];
+  uint32 from_state = 4;
+  uint32 next_state = 5;
+  oneof StateParam {
+    TradeStorageMulti storage = 6;
+  }
+}
+
+// 交易状态同步响应（对客户端关闭）
+message TradeSyncStateResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+//交易-交易物品
+message TradeItem {
+  uint32 item_type = 1;
+  uint32 amount = 2;
+}
+
+//交易-交易栏物品
+message TradeStorage {
+  TradeItem items = 1;
+}
+
+//交易-客户端请求“请求交易”
+message TradeInviteRequest {
+  uint64 target_user = 1;
+}
+
+//交易-服务端响应请求“请求交易”
+message TradeInviteResponse {
+  uint64 trade_id = 1;
+  string message = 2;
+}
+
+//交易-客户端"拒绝交易"
+message TradeDeclineRequest {
+  uint64 trade_id = 1;
+  uint64 target_user = 2;
+}
+
+message TradeDeclineResponse {
+
+}
+
+//交易-客户端请求"接受交易"
+message TradeAcceptRequest {
+  uint64 trade_id = 1;
+  uint64 target_user = 2;
+}
+
+message TradeAcceptResponse {
+
+}
+
+//交易-客户端请求“更新交易栏物品”
+message TradeUpdateItemRequest {
+  uint64 trade_id = 1;
+  repeated TradeStorage storage = 2;
+}
+
+message TradeUpdateItemResponse {
+
+}
+
+//交易-客户端请求"锁定交易物品"
+message TradeLockItemRequest {
+  uint64 trade_id = 1;
+  repeated TradeStorage storage = 2;
+}
+
+message TradeLockItemResponse {
+
+}
+
+//交易-客户端请求"取消锁定交易"
+message TradeCancelLockItemRequest {
+  uint64 trade_id = 1;
+}
+
+message TradeCancelLockItemResponse {
+
+}
+
+//交易-客户端请求"最终确认交易"
+message TradeConfirmRequest {
+  uint64 trade_id = 1;
+}
+
+message TradeConfirmResponse {
+
+}
+
+//交易-客户端请求"取消交易"
+message TradeCloseRequest {
+  uint64 trade_id = 1;
+}
+
+message TradeCloseResponse {
+
+}
+
+//交易过程消息-请求交易（触发场景：一方向另一方发起交易时。此消息仅发送交易请求方）
+message TradeInviteNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+}
+
+//交易过程消息-对方拒绝交易（触发场景：一方选择拒绝交易，或目标已经接受另一方的交易请求时。此消息仅发送交易发起方）
+message TradeDeclineNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+  string message = 3;
+}
+
+//交易过程消息-双方进入交易（触发场景：一方选择接受交易时）
+message TradeEnterTradingNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+}
+
+//交易过程消息-取消锁定交易（触发场景：一方取消锁定交易时）
+message TradeCancelLockItemNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+}
+
+//交易过程消息-交易栏物品变更
+message TradeUpdateItemNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+  repeated TradeStorage storage = 3;
+}
+
+//交易过程消息-锁定交易（触发场景：一方锁定交易时）
+message TradeLockItemNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+}
+
+//交易过程消息-请求最终确认交易（触发场景：双方均锁定交易后）
+message TradeConfirmRequestNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+}
+
+//交易过程消息-最终确认交易（触发场景：一方选择最终确认时）
+message TradeConfirmNotify {
+  uint64 trade_id = 1;
+  uint64 from_user = 2;
+}
+
+//交易过程消息-结束交易（触发场景：一方选择取消交易，或交易双方长时间未锁定、确认交易，或交易方意外离线）
+message TradeCloseNotify {
+  uint64 trade_id = 1;
+  string message = 2;
+}
+
+//交易过程消息-完成交易（触发场景：双方均进行最终确认后）
+message TradeCompleteNotify {
+  uint64 trade_id = 1;
+  repeated TradeStorage storage = 2;
+}
+
+message TradeEvent {
+  oneof Event {
+    TradeInviteNotify inviteNotify = 4;
+    TradeDeclineNotify declineNotify = 5;
+    TradeEnterTradingNotify enterTradingNotify = 6;
+    TradeCancelLockItemNotify cancelLockNotify = 7;
+    TradeLockItemNotify lockNotify = 8;
+    TradeConfirmRequestNotify confirmRequestNotify = 9;
+    TradeConfirmNotify confirmNotify = 10;
+    TradeCloseNotify closeNotify = 11;
+    TradeCompleteNotify completeNotify = 12;
+    TradeUpdateItemNotify updateItemNotify = 13;
+  }
+}
+
+message TradeUserInfoRequest {
+  uint64 target_user = 1 [(tevat.api.shard_key) = true];
+}
+
+message TradeUserInfo {
+  enum State{
+    STATE_UNSPECIFIED = 0;
+    STATE_OFFLINE = 1;
+    STATE_DEAD = 2;
+    STATE_TRADING = 3;
+  }
+  uint64 trade_id = 1;
+  State state = 2;
+}

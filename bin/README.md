@@ -1,27 +1,17 @@
 # xk6-tcp
 
-## Build
+## 使用方法
+  * 解压放到项目根目录下(与proto目录同级)
+  * sh命令行下执行: ./k6.exe run mmo.js -u 1 -i 1
+  * 更多使用命令,参考k6官方文档:https://k6.io/docs/
 
-To build a `k6` binary with this extension, first ensure you have the prerequisites:
-
-- [Go toolchain](https://go101.org/article/go-toolchain.html)
-- Git
-
-Then:
-
-1. Install `xk6`:
-  ```shell
-  $ go install go.k6.io/xk6/cmd/xk6@latest
-  ```
-
-2. Build the binary:
-  ```shell
-  $ xk6 build --with git.nd.com.cn/tools/tevat/xk6-tcp@latest
-  ```
-3. Use custom version and path Build the binary:
-  ```shell
-  $ xk6 build v0.39.0 --with git.nd.com.cn/tools/tevat/xk6-tcp="../mypay/xk6-tcp"   
-  ```
+## changelog
+### v1.1.0
+  * 支持proto协议, 支持动态解析proto文件, proto路径在config/config.json中配置
+### v1.0.0
+  * 支持json协议
+  * 支持接口api配置[config/apiData.json]
+  * 脚本逻辑参考下方example,或根目录下的*.js
 
 ## Example
 
@@ -44,13 +34,14 @@ export const options = {
 };
 
 export default function () {
-    const move_times = 100
-    const opts = {
-        move_times,
-        account_id:__VU+10000,
-        watch_enabled: true
-    }
-    client.start(addr, opts);
+  const m = client.m
+  client.m.setLocalLogin(true); // 是否本地登录开关
+  m.setProto(2);                // 服务端协议1:proto 2:json
+  const openId = '126126'
+  const res = client.login(openId); // 登录用户
+  const account_id = res.account_id;
+  client.callApi("changePwd", {account_id}); // 修改密码
+  client.callApi("resetPwd", {account_id});  // 重置密码
 }
 
 ```

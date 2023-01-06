@@ -1,0 +1,43 @@
+syntax = "proto3";
+package tevat.example.logic;
+
+option go_package = "tevat/example/pkg/proto/logic";
+
+//////////////////////////////////Active Start/////////////////////////////
+// 技能功能-message
+message Skill{
+	uint32 skill_id = 1;//技能id
+	uint32 skill_level = 2;//技能等级
+	bool is_unlock = 3;//技能是否解锁
+}
+
+// 技能notify
+message SkillsNotify{
+	uint32 skill_id = 1;//技能id
+	uint32 skill_level = 2;//技能等级
+	bool is_unlock = 3;//技能是否解锁
+}
+
+message SkillInfo{
+	repeated Skill skills = 1;//技能列表
+}
+
+// 查询技能请求
+message SkillQueryRequest{
+}
+
+// 查询技能响应
+message SkillQueryResponse{
+	repeated Skill skills = 1;//技能列表
+}
+
+// 获得技能请求
+message SkillGetRequest{
+	uint32 skill_id = 1; //技能id
+}
+
+// 获得技能响应
+message SkillGetResponse{
+	Skill skill = 1; //技能
+}
+//////////////////////////////////Active Start/////////////////////////////

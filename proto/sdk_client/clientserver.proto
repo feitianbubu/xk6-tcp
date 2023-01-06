@@ -1,0 +1,59 @@
+// 使用 proto3 语法
+syntax = "proto3";
+// proto 包名
+package api.clientserver.v1;
+
+
+// 生成的 Go 语言代码目录和包名
+option go_package = "git.nd.com.cn/gameaccount/gameaccount-grpc/api/clientserver/v1;csv1";
+
+
+enum MsgType {
+  MsgID_MsgHeartBeat = 0;  // 心跳
+  MsgID_MsgLoginReq =  1;  // 登录
+  MsgID_MsgLoginResp = 2; // 登录响应
+  MsgID_MsgQueueInfo = 3; // 排队信息
+}
+
+// ws客户端和账服之间消息通信协议
+message Message {
+  MsgType msgID = 1; // 消息类型
+  bytes data = 2; // 消息数据
+}
+
+// 心跳
+message MsgHeartBeat{
+  uint64 userID = 1; // 账号id
+}
+
+// 登录请求
+message MsgLoginReq{
+  string appID = 1; // sdk应用id
+  uint32 platformID = 2; // sdk平台id
+  string accountID = 3; // sdk账号id
+  string sessionID = 4; // sdk会话id
+  string sessionSecret = 5; // sdk会话密钥
+  uint32 clientType = 6; // 客户端类型;0-pc；1-linux；2-mac；3-ios；4-android；5-windows
+  string clientVersion = 7; // 客户端版本号
+  uint32 regionID = 8; // 区id
+  uint32 serverID = 9; // 服务器id,此区服id等价于slg中的worldID
+}
+
+// 登录响应
+message MsgLoginResp{
+  uint32 code = 1; // 登录结果，0-成功；1-失败
+  string msg = 2; // 登录结果描述
+  uint64 userID = 3; // 账服id
+  string token = 4; // token
+  string serverIP = 5; // 服务器ip
+  uint32 serverPort = 6; // 服务器端口
+  string customInfo = 7; // 自定义信息
+  int64 deadlineTime = 8; // code=12时才有效，封号截止时间，0为永久封号
+}
+
+// 排队信息
+message MsgQueueInfo {
+  uint64 userID = 1; // 账服id
+  uint32 position = 2; // 排队位置
+  uint32 speed = 3; // 排队速度,预估，单位：人/分钟
+}
